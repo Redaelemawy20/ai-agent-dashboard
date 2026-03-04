@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
+import { useToolStore } from "@/lib/tool-store";
 import { PreviewMessage } from "@/components/message";
 import { Input } from "@/components/input";
 import { ProjectInfo } from "@/components/project-info";
@@ -70,6 +71,16 @@ export function Chat({ sandboxId, isInitializing }: ChatContentProps) {
   }, [stopGeneration, messages, setMessages]);
 
   const isLoading = status !== "ready";
+  const syncFromMessages = useToolStore((s) => s.syncFromMessages);
+  const setAgentStatus = useToolStore((s) => s.setAgentStatus);
+
+  useEffect(() => syncFromMessages(messages), [messages, syncFromMessages]);
+
+  useEffect(() => {
+    if (status === "streaming") setAgentStatus("executing");
+    else if (status === "submitted") setAgentStatus("thinking");
+    else setAgentStatus("idle");
+  }, [status, setAgentStatus]);
 
   const onSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {

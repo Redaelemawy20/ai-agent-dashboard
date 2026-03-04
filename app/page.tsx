@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { VncPanel } from "@/components/vnc-panel";
 import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
+
 import {
   ResizableHandle,
   ResizablePanel,
@@ -19,9 +20,6 @@ export default function ChatPage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [sandboxId, setSandboxId] = useState<string | null>(null);
-  const [selectedToolCallId, setSelectedToolCallId] = useState<string | null>(
-    null
-  );
 
   const refreshDesktop = useCallback(async () => {
     try {
@@ -129,7 +127,7 @@ export default function ChatPage() {
                 onRefreshDesktop={refreshDesktop}
               />
             </div>
-            <ExpandedToolDetail selectedToolCallId={selectedToolCallId} />
+            <ExpandedToolDetail />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
