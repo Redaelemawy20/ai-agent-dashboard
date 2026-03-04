@@ -94,7 +94,7 @@ export function ExpandedToolDetail() {
               <img
                 src={`data:image/png;base64,${imageResult.data}`}
                 alt="Screenshot"
-                className="mt-1 w-full max-w-lg rounded border border-zinc-700"
+                className="mt-1 w-full max-w-4xl rounded border border-zinc-700"
               />
             ) : (
               <pre className="mt-1 p-2 bg-zinc-800 rounded overflow-x-auto max-h-40">

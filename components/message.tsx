@@ -2,11 +2,12 @@
 
 import type { Message } from "ai";
 import { AnimatePresence, motion } from "motion/react";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import equal from "fast-deep-equal";
 import { Streamdown } from "streamdown";
 
 import { ABORTED, cn } from "@/lib/utils";
+import { useToolStore } from "@/lib/tool-store";
 import {
   Camera,
   CheckCircle,
@@ -31,6 +32,15 @@ const PurePreviewMessage = ({
   status: "error" | "submitted" | "streaming" | "ready";
   isLatestMessage: boolean;
 }) => {
+  const selectToolCall = useToolStore((s) => s.selectToolCall);
+  const selectedId = useToolStore((s) => s.selectedToolCallId);
+
+  const handleToolCallClick = useCallback(
+    (toolCallId: string) => {
+      selectToolCall(selectedId === toolCallId ? null : toolCallId);
+    },
+    [selectToolCall, selectedId]
+  );
   return (
     <AnimatePresence key={message.id}>
       <motion.div
@@ -155,11 +165,17 @@ const PurePreviewMessage = ({
                     }
 
                     return (
-                      <motion.div
+                      <motion.button
                         initial={{ y: 5, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         key={`message-${message.id}-part-${i}`}
-                        className="flex flex-col gap-2 p-2 mb-3 text-sm bg-zinc-50 dark:bg-zinc-900 rounded-md border border-zinc-200 dark:border-zinc-800"
+                        onClick={() => handleToolCallClick(toolCallId)}
+                        className={cn(
+                          "flex flex-col gap-2 p-2 mb-3 text-sm rounded-md border text-left w-full transition-colors",
+                          selectedId === toolCallId
+                            ? "bg-blue-50 border-blue-300 dark:bg-blue-950 dark:border-blue-700"
+                            : "bg-zinc-50 border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                        )}
                       >
                         <div className="flex-1 flex items-center justify-center">
                           <div className="flex items-center justify-center w-8 h-8 bg-zinc-50 dark:bg-zinc-800 rounded-full">
@@ -202,39 +218,62 @@ const PurePreviewMessage = ({
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={`data:image/png;base64,${part.toolInvocation.result.data}`}
-                                alt="Generated Image"
-                                className="w-full aspect-[1024/768] rounded-sm"
+                                alt="Screenshot"
+                                className="max-w-28 w-full aspect-video object-cover rounded-sm border border-zinc-200 dark:border-zinc-700"
                               />
                             </div>
                           )
                         ) : action === "screenshot" ? (
-                          <div className="w-full aspect-[1024/768] rounded-sm bg-zinc-200 dark:bg-zinc-800 animate-pulse"></div>
+                          <div className="max-w-28 w-full aspect-video rounded-sm bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
                         ) : null}
-                      </motion.div>
+                      </motion.button>
                     );
                   }
                   if (toolName === "bash") {
-                    const { command } = args;
+                    const command =
+                      typeof args.command === "string" ? args.command : "";
+                    const result =
+                      state === "result" ? part.toolInvocation.result : null;
+                    const output =
+                      typeof result === "string"
+                        ? result
+                        : result === ABORTED
+                          ? ABORTED
+                          : result != null &&
+                              typeof result === "object" &&
+                              "text" in result
+                            ? String((result as { text: string }).text)
+                            : null;
 
                     return (
-                      <motion.div
+                      <motion.button
                         initial={{ y: 5, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         key={`message-${message.id}-part-${i}`}
-                        className="flex items-center gap-2 p-2 mb-3 text-sm bg-zinc-50 dark:bg-zinc-900 rounded-md border border-zinc-200 dark:border-zinc-800"
+                        onClick={() => handleToolCallClick(toolCallId)}
+                        className={cn(
+                          "flex gap-2 p-2 mb-3 text-sm rounded-md border text-left w-full transition-colors",
+                          selectedId === toolCallId
+                            ? "bg-blue-50 border-blue-300 dark:bg-blue-950 dark:border-blue-700"
+                            : "bg-zinc-50 border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                        )}
                       >
-                        <div className="flex items-center justify-center w-8 h-8 bg-zinc-50 dark:bg-zinc-800 rounded-full">
-                          <ScrollText className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium flex items-baseline gap-2">
-                            Running command
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
-                              {command.slice(0, 40)}...
-                            </span>
+                        <div className="flex items-start pt-0.5">
+                          <div className="flex items-center justify-center w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full shrink-0">
+                            <ScrollText className="w-4 h-4" />
                           </div>
                         </div>
-                        <div className="w-5 h-5 flex items-center justify-center">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                            $ {command}
+                          </div>
+                          {output != null && (
+                            <pre className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 rounded p-2 overflow-x-auto max-h-32 overflow-y-auto text-zinc-700 dark:text-zinc-300">
+                              {output}
+                            </pre>
+                          )}
+                        </div>
+                        <div className="w-5 h-5 flex items-center justify-center shrink-0">
                           {state === "call" ? (
                             isLatestMessage && status !== "ready" ? (
                               <Loader2 className="animate-spin h-4 w-4 text-zinc-500" />
@@ -242,10 +281,17 @@ const PurePreviewMessage = ({
                               <StopCircle className="h-4 w-4 text-red-500" />
                             )
                           ) : state === "result" ? (
-                            <CheckCircle size={14} className="text-green-600" />
+                            result === ABORTED ? (
+                              <CircleSlash size={14} className="text-amber-600" />
+                            ) : (
+                              <CheckCircle
+                                size={14}
+                                className="text-green-600"
+                              />
+                            )
                           ) : null}
                         </div>
-                      </motion.div>
+                      </motion.button>
                     );
                   }
                   return (

@@ -1,36 +1,8 @@
 "use client";
 
-import {
-  ChevronDown,
-  Camera,
-  ScrollText,
-  MousePointer,
-  MousePointerClick,
-  Keyboard,
-  KeyRound,
-  Clock,
-  Loader2,
-} from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { useToolStore } from "@/lib/tool-store";
-import { getActionKey, type ToolEvent } from "@/lib/types";
-
-const ACTION_ICON_MAP: Record<string, typeof Camera> = {
-  screenshot: Camera,
-  left_click: MousePointer,
-  right_click: MousePointerClick,
-  double_click: MousePointerClick,
-  mouse_move: MousePointer,
-  type: Keyboard,
-  key: KeyRound,
-  wait: Clock,
-  scroll: ScrollText,
-  bash: ScrollText,
-};
-
-function iconFor(event: ToolEvent) {
-  const key = getActionKey(event);
-  return ACTION_ICON_MAP[key] ?? MousePointer;
-}
+import type { ToolEvent } from "@/lib/types";
 
 function labelFor(event: ToolEvent): string {
   if (event.toolName === "bash") {
@@ -40,12 +12,6 @@ function labelFor(event: ToolEvent): string {
     return (event as { action: string }).action;
   }
   return event.toolName;
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms === null) return "…";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -96,19 +62,15 @@ export function DebugPanel() {
         {/* Counts per action type */}
         {Object.keys(actionCounts).length > 0 && (
           <div className="flex flex-wrap gap-2 px-4 py-2">
-            {Object.entries(actionCounts).map(([action, count]) => {
-              const Icon = ACTION_ICON_MAP[action] ?? MousePointer;
-              return (
-                <span
-                  key={action}
-                  className="inline-flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-600"
-                >
-                  <Icon className="h-3 w-3" />
-                  {action}
-                  <span className="font-semibold">{count}</span>
-                </span>
-              );
-            })}
+            {Object.entries(actionCounts).map(([action, count]) => (
+              <span
+                key={action}
+                className="inline-flex items-center gap-1 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] text-zinc-600"
+              >
+                {action}
+                <span className="font-semibold">{count}</span>
+              </span>
+            ))}
           </div>
         )}
       </div>
@@ -118,32 +80,23 @@ export function DebugPanel() {
         {toolCalls.length === 0 ? (
           <p className="px-4 py-3 text-xs text-zinc-400">No events yet.</p>
         ) : (
-          toolCalls.map((tc) => {
-            const Icon = iconFor(tc);
-            const label = labelFor(tc);
-
-            return (
-              <button
-                key={tc.toolCallId}
-                onClick={() =>
-                  selectToolCall(selectedId === tc.toolCallId ? null : tc.toolCallId)
-                }
-                className={`flex items-center gap-2 w-full px-4 py-1.5 text-left text-xs hover:bg-zinc-100 transition-colors ${selectedId === tc.toolCallId
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-zinc-600"
-                  }`}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{label}</span>
-                <span className="ml-auto shrink-0 text-[10px] text-zinc-400 tabular-nums">
-                  {formatDuration(tc.duration)}
-                </span>
-                <span
-                  className={`shrink-0 h-1.5 w-1.5 rounded-full ${STATUS_DOT[tc.status]}`}
-                />
-              </button>
-            );
-          })
+          toolCalls.map((tc) => (
+            <button
+              key={tc.toolCallId}
+              onClick={() =>
+                selectToolCall(selectedId === tc.toolCallId ? null : tc.toolCallId)
+              }
+              className={`flex items-center gap-2 w-full px-4 py-1.5 text-left text-xs hover:bg-zinc-100 transition-colors ${selectedId === tc.toolCallId
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-zinc-600"
+                }`}
+            >
+              <span className="truncate flex-1">{labelFor(tc)}</span>
+              <span
+                className={`shrink-0 h-1.5 w-1.5 rounded-full ${STATUS_DOT[tc.status]}`}
+              />
+            </button>
+          ))
         )}
       </div>
     </details>
