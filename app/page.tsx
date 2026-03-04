@@ -5,11 +5,11 @@ import { DeployButton } from "@/components/project-info";
 import { Chat } from "@/components/chat";
 import { DebugPanel } from "@/components/debug-panel";
 import { SessionSidebar } from "@/components/session-sidebar";
-import { getDesktopURL } from "@/lib/sandbox/utils";
-import { useSessionStore, createNewSession } from "@/lib/session-store";
+import { useSessionStore } from "@/lib/session-store";
 import { useToolStore } from "@/lib/tool-store";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useSandboxLifecycle } from "@/lib/hooks/use-sandbox-lifecycle";
+import { usePageUnloadCleanup } from "@/lib/hooks/use-page-unload-cleanup";
+import { useState } from "react";
 import { VncPanel } from "@/components/vnc-panel";
 import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
 import { Modal } from "@/components/ui/modal";
@@ -23,127 +23,23 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-async function killDesktopApi(sandboxId: string): Promise<void> {
-  try {
-    await fetch(
-      `/api/kill-desktop?sandboxId=${encodeURIComponent(sandboxId)}`,
-      { method: "POST" }
-    );
-  } catch (e) {
-    console.error("Failed to kill desktop:", e);
-  }
-}
-
 export default function ChatPage() {
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [sandboxId, setSandboxId] = useState<string | null>(null);
   const [showVncOnMobile, setShowVncOnMobile] = useState(false);
   const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
   const [sidebarCollapsedDesktop, setSidebarCollapsedDesktop] = useState(false);
-  const prevActiveSessionIdRef = useRef<string | null>(null);
-  const sandboxIdRef = useRef<string | null>(null);
-  sandboxIdRef.current = sandboxId;
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
-  const sessions = useSessionStore((s) => s.sessions);
   const selectedToolCallId = useToolStore((s) => s.selectedToolCallId);
   const selectToolCall = useToolStore((s) => s.selectToolCall);
-  const hasHydrated = useSessionStore((s) => s._hasHydrated);
-  const addSession = useSessionStore((s) => s.addSession);
   const resetToolStore = useToolStore((s) => s.reset);
 
-  // Ensure at least one session exists after localStorage has loaded
-  useEffect(() => {
-    if (!hasHydrated || sessions.length > 0) return;
-    const session = createNewSession();
-    addSession(session);
-  }, [hasHydrated, sessions.length, addSession]);
+  const { streamUrl, sandboxId, isInitializing, refreshDesktop } =
+    useSandboxLifecycle({
+      activeSessionId,
+      onSessionSwitch: resetToolStore,
+    });
 
-  // Sandbox lifecycle: create when active session exists, kill previous when switching
-  useEffect(() => {
-    if (!activeSessionId) return;
-
-    const prevSessionId = prevActiveSessionIdRef.current;
-    prevActiveSessionIdRef.current = activeSessionId;
-
-    // Reset tool store when switching sessions
-    if (prevSessionId !== activeSessionId) {
-      resetToolStore();
-    }
-
-    let cancelled = false;
-    const prevSandboxId = sandboxIdRef.current;
-
-    const init = async () => {
-      if (prevSandboxId && prevSessionId !== activeSessionId) {
-        await killDesktopApi(prevSandboxId);
-      }
-
-      try {
-        setIsInitializing(true);
-        setStreamUrl(null);
-        setSandboxId(null);
-        const { streamUrl: url, id } = await getDesktopURL();
-        if (cancelled) return;
-        setStreamUrl(url);
-        setSandboxId(id);
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to initialize desktop:", err);
-          toast.error("Failed to initialize desktop");
-        }
-      } finally {
-        if (!cancelled) setIsInitializing(false);
-      }
-    };
-
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSessionId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const refreshDesktop = useCallback(async () => {
-    try {
-      setIsInitializing(true);
-      if (sandboxId) await killDesktopApi(sandboxId);
-      const { streamUrl: url, id } = await getDesktopURL();
-      setStreamUrl(url);
-      setSandboxId(id);
-    } catch (err) {
-      console.error("Failed to refresh desktop:", err);
-    } finally {
-      setIsInitializing(false);
-    }
-  }, [sandboxId]);
-
-  // Kill desktop on page close
-  useEffect(() => {
-    if (!sandboxId) return;
-    const kill = () =>
-      navigator.sendBeacon(
-        `/api/kill-desktop?sandboxId=${encodeURIComponent(sandboxId)}`
-      );
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    if (isIOS || isSafari) {
-      window.addEventListener("pagehide", kill);
-      return () => {
-        window.removeEventListener("pagehide", kill);
-        kill();
-      };
-    }
-    window.addEventListener("beforeunload", kill);
-    return () => {
-      window.removeEventListener("beforeunload", kill);
-      kill();
-    };
-  }, [sandboxId]);
-
-
+  usePageUnloadCleanup(sandboxId);
 
   return (
     <div className="flex h-dvh relative">

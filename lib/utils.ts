@@ -8,6 +8,17 @@ export function cn(...inputs: ClassValue[]) {
 
 export const ABORTED = "User aborted";
 
+export function isIOS(): boolean {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+export function isSafari(): boolean {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
 export const prunedMessages = (messages: UIMessage[]): UIMessage[] => {
   if (messages.at(-1)?.role === "assistant") {
     return messages;

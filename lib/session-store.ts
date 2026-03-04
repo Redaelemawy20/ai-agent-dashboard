@@ -75,6 +75,9 @@ export const useSessionStore = create<SessionStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        if (state && state.sessions.length === 0) {
+          state.addSession(createNewSession());
+        }
       },
     }
   )
