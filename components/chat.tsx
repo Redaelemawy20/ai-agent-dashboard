@@ -1,23 +1,45 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
+import type { UIMessage } from "ai";
 import { toast } from "sonner";
 import { useToolStore } from "@/lib/tool-store";
+import {
+  loadMessages,
+  saveMessages,
+  useSessionStore,
+} from "@/lib/session-store";
 import { PreviewMessage } from "@/components/message";
 import { Input } from "@/components/input";
 import { ProjectInfo } from "@/components/project-info";
 import { PromptSuggestions } from "@/components/prompt-suggestions";
 import { useScrollToBottom } from "@/lib/use-scroll-to-bottom";
-import { ABORTED } from "@/lib/utils";
+import { ABORTED, pruneMessagesForStorage } from "@/lib/utils";
 
 export interface ChatContentProps {
+  sessionId: string | null;
   sandboxId: string | null;
   isInitializing: boolean;
 }
 
-export function Chat({ sandboxId, isInitializing }: ChatContentProps) {
+export function Chat({
+  sessionId,
+  sandboxId,
+  isInitializing,
+}: ChatContentProps) {
   const [containerRef, endRef] = useScrollToBottom();
+  const sessions = useSessionStore((s) => s.sessions);
+  const updateSessionTitle = useSessionStore((s) => s.updateSessionTitle);
+  const setActiveSessionHasMessages = useSessionStore(
+    (s) => s.setActiveSessionHasMessages
+  );
+
+  const initialMessages = useMemo(
+    () => (sessionId ? (loadMessages(sessionId) as UIMessage[]) : []),
+    [sessionId]
+  );
+
   const {
     messages,
     input,
@@ -29,7 +51,8 @@ export function Chat({ sandboxId, isInitializing }: ChatContentProps) {
     setMessages,
   } = useChat({
     api: "/api/chat",
-    id: sandboxId ?? undefined,
+    id: sessionId ?? undefined,
+    initialMessages,
     body: { sandboxId },
     maxSteps: 30,
     onError: (error) => {
@@ -81,6 +104,37 @@ export function Chat({ sandboxId, isInitializing }: ChatContentProps) {
     else if (status === "submitted") setAgentStatus("thinking");
     else setAgentStatus("idle");
   }, [status, setAgentStatus]);
+
+  // Persist messages to localStorage (screenshots pruned to save space)
+  useEffect(() => {
+    if (sessionId && messages.length > 0) {
+      saveMessages(sessionId, pruneMessagesForStorage(messages));
+    }
+  }, [sessionId, messages]);
+
+  // Sync hasMessages for sidebar (disable "New chat" when current is empty)
+  useEffect(() => {
+    setActiveSessionHasMessages(messages.length > 0);
+    return () => setActiveSessionHasMessages(false);
+  }, [messages.length, setActiveSessionHasMessages]);
+
+  // Update session title from first user message (only when still "New chat")
+  useEffect(() => {
+    if (!sessionId) return;
+    const session = sessions.find((s) => s.id === sessionId);
+    if (session?.title !== "New chat") return;
+    const firstUser = messages.find((m) => m.role === "user");
+    if (!firstUser) return;
+    const text =
+      firstUser.parts?.find((p): p is { type: "text"; text: string } =>
+        p.type === "text"
+      )?.text ?? "";
+    const title = text.slice(0, 40).trim() || "New chat";
+    updateSessionTitle(
+      sessionId,
+      text.length > 40 ? `${title}…` : title
+    );
+  }, [sessionId, sessions, messages, updateSessionTitle]);
 
   const onSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {

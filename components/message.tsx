@@ -213,7 +213,7 @@ const PurePreviewMessage = ({
                           </div>
                         </div>
                         {state === "result" ? (
-                          part.toolInvocation.result.type === "image" && (
+                          part.toolInvocation.result.type === "image" ? (
                             <div className="p-2">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
@@ -222,7 +222,14 @@ const PurePreviewMessage = ({
                                 className="max-w-28 w-full aspect-video object-cover rounded-sm border border-zinc-200 dark:border-zinc-700"
                               />
                             </div>
-                          )
+                          ) : typeof part.toolInvocation.result === "object" &&
+                            part.toolInvocation.result != null &&
+                            "text" in part.toolInvocation.result ? (
+                            <div className="p-2 text-[10px] text-zinc-500 italic">
+                              {(part.toolInvocation.result as { text: string })
+                                .text}
+                            </div>
+                          ) : null
                         ) : action === "screenshot" ? (
                           <div className="max-w-28 w-full aspect-video rounded-sm bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
                         ) : null}

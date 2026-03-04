@@ -17,6 +17,7 @@ interface ToolStore {
   syncFromMessages: (messages: Message[]) => void;
   setAgentStatus: (status: AgentStatus) => void;
   selectToolCall: (id: string | null) => void;
+  reset: () => void;
 }
 
 const timings = new Map<string, TimingEntry>();
@@ -35,4 +36,9 @@ export const useToolStore = create<ToolStore>((set) => ({
   setAgentStatus: (agentStatus) => set({ agentStatus }),
 
   selectToolCall: (id) => set({ selectedToolCallId: id }),
+
+  reset: () => {
+    timings.clear();
+    set({ toolCalls: [], actionCounts: {}, selectedToolCallId: null });
+  },
 }));

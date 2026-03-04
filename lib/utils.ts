@@ -38,4 +38,37 @@ export const prunedMessages = (messages: UIMessage[]): UIMessage[] => {
     });
     return message;
   });
-};
+}
+
+const STORAGE_IMAGE_PLACEHOLDER = "[Screenshot redacted to save space]";
+
+export function pruneMessagesForStorage(messages: UIMessage[]): UIMessage[] {
+  return messages.map((message) => ({
+    ...message,
+    parts: message.parts?.map((part) => {
+      if (part.type !== "tool-invocation") return part;
+      const inv = part.toolInvocation;
+      const result = "result" in inv ? inv.result : undefined;
+      if (
+        inv.toolName === "computer" &&
+        (inv.args as { action?: string }).action === "screenshot" &&
+        result != null &&
+        typeof result === "object" &&
+        "type" in result &&
+        (result as { type: string }).type === "image"
+      ) {
+        return {
+          ...part,
+          toolInvocation: {
+            ...inv,
+            result: {
+              type: "text" as const,
+              text: STORAGE_IMAGE_PLACEHOLDER,
+            },
+          },
+        };
+      }
+      return part;
+    }),
+  }));
+}
