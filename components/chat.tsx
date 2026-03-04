@@ -1,21 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import { toast } from "sonner";
-import { useToolStore } from "@/lib/tool-store";
-import {
-  loadMessages,
-  saveMessages,
-  useSessionStore,
-} from "@/lib/session-store";
+import { loadMessages } from "@/lib/session-store";
 import { PreviewMessage } from "@/components/message";
 import { Input } from "@/components/input";
 import { ProjectInfo } from "@/components/project-info";
 import { PromptSuggestions } from "@/components/prompt-suggestions";
 import { useScrollToBottom } from "@/lib/use-scroll-to-bottom";
-import { ABORTED, pruneMessagesForStorage } from "@/lib/utils";
+import { useStopWithAbort } from "@/lib/hooks/use-stop-with-abort";
+import { useChatSessionSync } from "@/lib/hooks/use-chat-session-sync";
+import { useChatToolSync } from "@/lib/hooks/use-chat-tool-sync";
 
 export interface ChatContentProps {
   sessionId: string | null;
@@ -29,11 +26,6 @@ export function Chat({
   isInitializing,
 }: ChatContentProps) {
   const [containerRef, endRef] = useScrollToBottom();
-  const sessions = useSessionStore((s) => s.sessions);
-  const updateSessionTitle = useSessionStore((s) => s.updateSessionTitle);
-  const setActiveSessionHasMessages = useSessionStore(
-    (s) => s.setActiveSessionHasMessages
-  );
 
   const initialMessages = useMemo(
     () => (sessionId ? (loadMessages(sessionId) as UIMessage[]) : []),
@@ -65,87 +57,20 @@ export function Chat({
     },
   });
 
-  const stop = useCallback(() => {
-    stopGeneration();
-    const lastMessage = messages.at(-1);
-    const lastMessageLastPart = lastMessage?.parts.at(-1);
-    if (
-      lastMessage?.role === "assistant" &&
-      lastMessageLastPart?.type === "tool-invocation"
-    ) {
-      setMessages((prev) => [
-        ...prev.slice(0, -1),
-        {
-          ...lastMessage,
-          parts: [
-            ...lastMessage.parts.slice(0, -1),
-            {
-              ...lastMessageLastPart,
-              toolInvocation: {
-                ...lastMessageLastPart.toolInvocation,
-                state: "result",
-                result: ABORTED,
-              },
-            },
-          ],
-        },
-      ]);
-    }
-  }, [stopGeneration, messages, setMessages]);
+  // Stop generation and mark last tool invocation as aborted
+  const stop = useStopWithAbort({
+    stopGeneration,
+    messages,
+    setMessages,
+  });
+
+  // Persist messages, sync hasMessages, update session title from first user message
+  useChatSessionSync({ sessionId, messages });
+
+  // Sync tool events and agent status to tool store
+  useChatToolSync({ messages, status });
 
   const isLoading = status !== "ready";
-  const syncFromMessages = useToolStore((s) => s.syncFromMessages);
-  const setAgentStatus = useToolStore((s) => s.setAgentStatus);
-
-  useEffect(() => syncFromMessages(messages), [messages, syncFromMessages]);
-
-  useEffect(() => {
-    if (status === "streaming") setAgentStatus("executing");
-    else if (status === "submitted") setAgentStatus("thinking");
-    else setAgentStatus("idle");
-  }, [status, setAgentStatus]);
-
-  // Persist messages to localStorage (screenshots pruned to save space)
-  useEffect(() => {
-    if (sessionId && messages.length > 0) {
-      saveMessages(sessionId, pruneMessagesForStorage(messages));
-    }
-  }, [sessionId, messages]);
-
-  // Sync hasMessages for sidebar (disable "New chat" when current is empty)
-  useEffect(() => {
-    setActiveSessionHasMessages(messages.length > 0);
-    return () => setActiveSessionHasMessages(false);
-  }, [messages.length, setActiveSessionHasMessages]);
-
-  // Update session title from first user message (only when still "New chat")
-  useEffect(() => {
-    if (!sessionId) return;
-    const session = sessions.find((s) => s.id === sessionId);
-    if (session?.title !== "New chat") return;
-    const firstUser = messages.find((m) => m.role === "user");
-    if (!firstUser) return;
-    const text =
-      firstUser.parts?.find((p): p is { type: "text"; text: string } =>
-        p.type === "text"
-      )?.text ?? "";
-    const title = text.slice(0, 40).trim() || "New chat";
-    updateSessionTitle(
-      sessionId,
-      text.length > 40 ? `${title}…` : title
-    );
-  }, [sessionId, sessions, messages, updateSessionTitle]);
-
-  const onSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
-      console.log(
-        "[ChatContent] User submitting message, input:",
-        input?.slice(0, 80) + (input && input.length > 80 ? "..." : "")
-      );
-      handleSubmit(e);
-    },
-    [handleSubmit, input]
-  );
 
   return (
     <>
@@ -174,7 +99,7 @@ export function Chat({
       )}
 
       <div className="bg-white shrink-0">
-        <form onSubmit={onSubmit} className="p-4">
+        <form onSubmit={handleSubmit} className="p-4">
           <Input
             handleInputChange={handleInputChange}
             input={input}

@@ -53,6 +53,21 @@ export const prunedMessages = (messages: UIMessage[]): UIMessage[] => {
 
 const STORAGE_IMAGE_PLACEHOLDER = "[Screenshot redacted to save space]";
 
+const TITLE_MAX_LENGTH = 40;
+
+export function extractTitleFromFirstUserMessage(
+  messages: UIMessage[]
+): string | null {
+  const firstUser = messages.find((m) => m.role === "user");
+  if (!firstUser) return null;
+  const text =
+    firstUser.parts?.find(
+      (p): p is { type: "text"; text: string } => p.type === "text"
+    )?.text ?? "";
+  const title = text.slice(0, TITLE_MAX_LENGTH).trim() || "New chat";
+  return text.length > TITLE_MAX_LENGTH ? `${title}…` : title;
+}
+
 export function pruneMessagesForStorage(messages: UIMessage[]): UIMessage[] {
   return messages.map((message) => ({
     ...message,

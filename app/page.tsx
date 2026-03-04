@@ -1,7 +1,6 @@
 "use client";
 
-import { AISDKLogo } from "@/components/icons";
-import { DeployButton } from "@/components/project-info";
+import { Header } from "@/components/header";
 import { Chat } from "@/components/chat";
 import { DebugPanel } from "@/components/debug-panel";
 import { SessionSidebar } from "@/components/session-sidebar";
@@ -13,8 +12,6 @@ import { useState } from "react";
 import { VncPanel } from "@/components/vnc-panel";
 import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
 import { Modal } from "@/components/ui/modal";
-import { Monitor, MessageSquare, Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { SidebarOverlay } from "@/components/sidebar-overlay";
 
 import {
@@ -43,11 +40,10 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-dvh relative">
-
-
       {/* Desktop layout */}
       <div className="w-full hidden xl:flex h-full relative">
         <ResizablePanelGroup direction="horizontal" className="h-full">
+          {/* Left: sessions sidebar + chat */}
           <ResizablePanel
             defaultSize={30}
             minSize={25}
@@ -58,21 +54,9 @@ export default function ChatPage() {
                 <SessionSidebar isInitializing={isInitializing} />
               )}
               <div className="flex flex-col h-full flex-1 min-w-0">
-                <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0 gap-2">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setSidebarCollapsedDesktop((v) => !v)}
-                      aria-label="Toggle sidebar"
-                    >
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                    <AISDKLogo />
-                  </div>
-                  <DeployButton />
-                </div>
+                <Header
+                  onMenuClick={() => setSidebarCollapsedDesktop((v) => !v)}
+                />
                 <Chat
                   sessionId={activeSessionId}
                   sandboxId={sandboxId}
@@ -85,6 +69,7 @@ export default function ChatPage() {
 
           <ResizableHandle withHandle />
 
+          {/* Right: VNC desktop */}
           <ResizablePanel
             defaultSize={70}
             minSize={40}
@@ -101,46 +86,14 @@ export default function ChatPage() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-
       {/* Mobile layout */}
       <div className="w-full xl:hidden flex flex-col h-dvh">
-        <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0 gap-2 border-b border-zinc-200">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => setSidebarOpenMobile((v) => !v)}
-              aria-label="Toggle sidebar"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
-            <AISDKLogo />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={() => setShowVncOnMobile((v) => !v)}
-              aria-pressed={showVncOnMobile}
-              aria-label={showVncOnMobile ? "View chat" : "View desktop"}
-            >
-              {showVncOnMobile ? (
-                <>
-                  <MessageSquare className="h-3.5 w-3.5" />
-                  View chat
-                </>
-              ) : (
-                <>
-                  <Monitor className="h-3.5 w-3.5" />
-                  View desktop
-                </>
-              )}
-            </Button>
-            <DeployButton />
-          </div>
-        </div>
+        <Header
+          onMenuClick={() => setSidebarOpenMobile((v) => !v)}
+          showVncOnMobile={showVncOnMobile}
+          onViewToggle={() => setShowVncOnMobile((v) => !v)}
+          className="border-b border-zinc-200"
+        />
         <div className="flex flex-1 min-h-0 min-w-0">
           {showVncOnMobile ? (
             <div className="flex flex-col flex-1 min-w-0 bg-black relative">
@@ -164,7 +117,6 @@ export default function ChatPage() {
           )}
         </div>
       </div>
-
       {/* Tool detail modal on mobile - opens when user clicks a tool call */}
       <div className="xl:hidden">
         <Modal
@@ -174,7 +126,6 @@ export default function ChatPage() {
           <ExpandedToolDetail variant="modal" />
         </Modal>
       </div>
-
       {/* Sidebar overlay on mobile */}
       <div className="xl:hidden">
         <SidebarOverlay
