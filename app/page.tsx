@@ -12,6 +12,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { VncPanel } from "@/components/vnc-panel";
 import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
+import { Modal } from "@/components/ui/modal";
+import { Monitor, MessageSquare, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SidebarOverlay } from "@/components/sidebar-overlay";
 
 import {
   ResizableHandle,
@@ -34,12 +38,17 @@ export default function ChatPage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [sandboxId, setSandboxId] = useState<string | null>(null);
+  const [showVncOnMobile, setShowVncOnMobile] = useState(false);
+  const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
+  const [sidebarCollapsedDesktop, setSidebarCollapsedDesktop] = useState(false);
   const prevActiveSessionIdRef = useRef<string | null>(null);
   const sandboxIdRef = useRef<string | null>(null);
   sandboxIdRef.current = sandboxId;
 
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const sessions = useSessionStore((s) => s.sessions);
+  const selectedToolCallId = useToolStore((s) => s.selectedToolCallId);
+  const selectToolCall = useToolStore((s) => s.selectToolCall);
   const hasHydrated = useSessionStore((s) => s._hasHydrated);
   const addSession = useSessionStore((s) => s.addSession);
   const resetToolStore = useToolStore((s) => s.reset);
@@ -134,28 +143,14 @@ export default function ChatPage() {
     };
   }, [sandboxId]);
 
-  const chatPanel = (
-    <div className="flex flex-col h-full flex-1 min-w-0">
-      <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0">
-        <AISDKLogo />
-        <DeployButton />
-      </div>
-      <Chat
-        sessionId={activeSessionId}
-        sandboxId={sandboxId}
-        isInitializing={isInitializing}
-      />
-      <DebugPanel />
-    </div>
-  );
+
 
   return (
     <div className="flex h-dvh relative">
-      <div className="flex items-center justify-center fixed left-1/2 -translate-x-1/2 top-5 shadow-md text-xs mx-auto rounded-lg h-8 w-fit bg-blue-600 text-white px-3 py-2 text-left z-50 xl:hidden">
-        <span>Headless mode</span>
-      </div>
 
-      <div className="w-full hidden xl:flex h-full">
+
+      {/* Desktop layout */}
+      <div className="w-full hidden xl:flex h-full relative">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel
             defaultSize={30}
@@ -163,8 +158,32 @@ export default function ChatPage() {
             className="flex flex-col border-r border-zinc-200"
           >
             <div className="flex h-full min-w-0">
-              <SessionSidebar isInitializing={isInitializing} />
-              {chatPanel}
+              {!sidebarCollapsedDesktop && (
+                <SessionSidebar isInitializing={isInitializing} />
+              )}
+              <div className="flex flex-col h-full flex-1 min-w-0">
+                <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0 gap-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setSidebarCollapsedDesktop((v) => !v)}
+                      aria-label="Toggle sidebar"
+                    >
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                    <AISDKLogo />
+                  </div>
+                  <DeployButton />
+                </div>
+                <Chat
+                  sessionId={activeSessionId}
+                  sandboxId={sandboxId}
+                  isInitializing={isInitializing}
+                />
+                <DebugPanel />
+              </div>
             </div>
           </ResizablePanel>
 
@@ -187,11 +206,87 @@ export default function ChatPage() {
         </ResizablePanelGroup>
       </div>
 
+      {/* Mobile layout */}
       <div className="w-full xl:hidden flex flex-col h-dvh">
-        <div className="flex h-full min-w-0">
-          <SessionSidebar isInitializing={isInitializing} />
-          <div className="flex flex-col flex-1 min-w-0">{chatPanel}</div>
+        <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0 gap-2 border-b border-zinc-200">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => setSidebarOpenMobile((v) => !v)}
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            <AISDKLogo />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowVncOnMobile((v) => !v)}
+              aria-pressed={showVncOnMobile}
+              aria-label={showVncOnMobile ? "View chat" : "View desktop"}
+            >
+              {showVncOnMobile ? (
+                <>
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  View chat
+                </>
+              ) : (
+                <>
+                  <Monitor className="h-3.5 w-3.5" />
+                  View desktop
+                </>
+              )}
+            </Button>
+            <DeployButton />
+          </div>
         </div>
+        <div className="flex flex-1 min-h-0 min-w-0">
+          {showVncOnMobile ? (
+            <div className="flex flex-col flex-1 min-w-0 bg-black relative">
+              <div className="flex-1 min-h-0">
+                <VncPanel
+                  streamUrl={streamUrl}
+                  isInitializing={isInitializing}
+                  onRefreshDesktop={refreshDesktop}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col flex-1 min-w-0 h-full min-h-0">
+              <Chat
+                sessionId={activeSessionId}
+                sandboxId={sandboxId}
+                isInitializing={isInitializing}
+              />
+              <DebugPanel />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tool detail modal on mobile - opens when user clicks a tool call */}
+      <div className="xl:hidden">
+        <Modal
+          isOpen={!!selectedToolCallId}
+          onClose={() => selectToolCall(null)}
+        >
+          <ExpandedToolDetail variant="modal" />
+        </Modal>
+      </div>
+
+      {/* Sidebar overlay on mobile */}
+      <div className="xl:hidden">
+        <SidebarOverlay
+          isOpen={sidebarOpenMobile}
+          onClose={() => setSidebarOpenMobile(false)}
+        >
+          <SessionSidebar isInitializing={isInitializing} />
+        </SidebarOverlay>
       </div>
     </div>
   );
