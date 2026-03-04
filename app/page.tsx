@@ -4,13 +4,15 @@ import { PreviewMessage } from "@/components/message";
 import { getDesktopURL } from "@/lib/sandbox/utils";
 import { useScrollToBottom } from "@/lib/use-scroll-to-bottom";
 import { useChat } from "@ai-sdk/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/input";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DeployButton, ProjectInfo } from "@/components/project-info";
 import { AISDKLogo } from "@/components/icons";
+import { DebugPanel } from "@/components/debug-panel";
 import { PromptSuggestions } from "@/components/prompt-suggestions";
+import { VncPanel } from "@/components/vnc-panel";
+import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -26,6 +28,7 @@ export default function Chat() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [sandboxId, setSandboxId] = useState<string | null>(null);
+  const [selectedToolCallId, setSelectedToolCallId] = useState<string | null>(null);
 
   const {
     messages,
@@ -84,11 +87,10 @@ export default function Chat() {
 
   const isLoading = status !== "ready";
 
-  const refreshDesktop = async () => {
+  const refreshDesktop = useCallback(async () => {
     try {
       setIsInitializing(true);
       const { streamUrl, id } = await getDesktopURL(sandboxId || undefined);
-      // console.log("Refreshed desktop connection with ID:", id);
       setStreamUrl(streamUrl);
       setSandboxId(id);
     } catch (err) {
@@ -96,7 +98,7 @@ export default function Chat() {
     } finally {
       setIsInitializing(false);
     }
-  };
+  }, [sandboxId]);
 
   // Kill desktop on page close
   useEffect(() => {
@@ -209,6 +211,7 @@ export default function Chat() {
                 }
               />
             )}
+            <DebugPanel />
             <div className="bg-white">
               <form
                 onSubmit={(e) => {
@@ -235,39 +238,20 @@ export default function Chat() {
 
           <ResizableHandle withHandle />
 
-          {/* Desktop Stream Panel (Right) */}
+          {/* Desktop Stream Panel (Right) — memoized so it won't re-render on chat updates */}
           <ResizablePanel
             defaultSize={70}
             minSize={40}
-            className="bg-black relative items-center justify-center"
+            className="flex flex-col bg-black relative"
           >
-            {streamUrl ? (
-              <>
-                <iframe
-                  src={streamUrl}
-                  className="w-full h-full"
-                  style={{
-                    transformOrigin: "center",
-                    width: "100%",
-                    height: "100%",
-                  }}
-                  allow="autoplay"
-                />
-                <Button
-                  onClick={refreshDesktop}
-                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded text-sm z-10"
-                  disabled={isInitializing}
-                >
-                  {isInitializing ? "Creating desktop..." : "New desktop"}
-                </Button>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-white">
-                {isInitializing
-                  ? "Initializing desktop..."
-                  : "Loading stream..."}
-              </div>
-            )}
+            <div className="flex-1 min-h-0">
+              <VncPanel
+                streamUrl={streamUrl}
+                isInitializing={isInitializing}
+                onRefreshDesktop={refreshDesktop}
+              />
+            </div>
+            <ExpandedToolDetail selectedToolCallId={selectedToolCallId} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
@@ -304,6 +288,7 @@ export default function Chat() {
             }
           />
         )}
+        <DebugPanel />
         <div className="bg-white">
           <form onSubmit={handleSubmit} className="p-4">
             <Input
