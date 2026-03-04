@@ -1,16 +1,12 @@
 "use client";
 
-import { PreviewMessage } from "@/components/message";
-import { getDesktopURL } from "@/lib/sandbox/utils";
-import { useScrollToBottom } from "@/lib/use-scroll-to-bottom";
-import { useChat } from "@ai-sdk/react";
-import { useCallback, useEffect, useState } from "react";
-import { Input } from "@/components/input";
-import { toast } from "sonner";
-import { DeployButton, ProjectInfo } from "@/components/project-info";
 import { AISDKLogo } from "@/components/icons";
+import { DeployButton } from "@/components/project-info";
+import { Chat } from "@/components/chat";
 import { DebugPanel } from "@/components/debug-panel";
-import { PromptSuggestions } from "@/components/prompt-suggestions";
+import { getDesktopURL } from "@/lib/sandbox/utils";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { VncPanel } from "@/components/vnc-panel";
 import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
 import {
@@ -18,74 +14,14 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { ABORTED } from "@/lib/utils";
 
-export default function Chat() {
-  // Create separate refs for mobile and desktop to ensure both scroll properly
-  const [desktopContainerRef, desktopEndRef] = useScrollToBottom();
-  const [mobileContainerRef, mobileEndRef] = useScrollToBottom();
-
+export default function ChatPage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [sandboxId, setSandboxId] = useState<string | null>(null);
-  const [selectedToolCallId, setSelectedToolCallId] = useState<string | null>(null);
-
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    status,
-    stop: stopGeneration,
-    append,
-    setMessages,
-  } = useChat({
-    api: "/api/chat",
-    id: sandboxId ?? undefined,
-    body: {
-      sandboxId,
-    },
-    maxSteps: 30,
-    onError: (error) => {
-      console.error(error);
-      toast.error("There was an error", {
-        description: "Please try again later.",
-        richColors: true,
-        position: "top-center",
-      });
-    },
-  });
-
-  const stop = () => {
-    stopGeneration();
-
-    const lastMessage = messages.at(-1);
-    const lastMessageLastPart = lastMessage?.parts.at(-1);
-    if (
-      lastMessage?.role === "assistant" &&
-      lastMessageLastPart?.type === "tool-invocation"
-    ) {
-      setMessages((prev) => [
-        ...prev.slice(0, -1),
-        {
-          ...lastMessage,
-          parts: [
-            ...lastMessage.parts.slice(0, -1),
-            {
-              ...lastMessageLastPart,
-              toolInvocation: {
-                ...lastMessageLastPart.toolInvocation,
-                state: "result",
-                result: ABORTED,
-              },
-            },
-          ],
-        },
-      ]);
-    }
-  };
-
-  const isLoading = status !== "ready";
+  const [selectedToolCallId, setSelectedToolCallId] = useState<string | null>(
+    null
+  );
 
   const refreshDesktop = useCallback(async () => {
     try {
@@ -104,53 +40,40 @@ export default function Chat() {
   useEffect(() => {
     if (!sandboxId) return;
 
-    // Function to kill the desktop - just one method to reduce duplicates
     const killDesktop = () => {
       if (!sandboxId) return;
-
-      // Use sendBeacon which is best supported across browsers
       navigator.sendBeacon(
-        `/api/kill-desktop?sandboxId=${encodeURIComponent(sandboxId)}`,
+        `/api/kill-desktop?sandboxId=${encodeURIComponent(sandboxId)}`
       );
     };
 
-    // Detect iOS / Safari
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(
+      navigator.userAgent
+    );
 
-    // Choose exactly ONE event handler based on the browser
     if (isIOS || isSafari) {
-      // For Safari on iOS, use pagehide which is most reliable
       window.addEventListener("pagehide", killDesktop);
-
       return () => {
         window.removeEventListener("pagehide", killDesktop);
-        // Also kill desktop when component unmounts
         killDesktop();
       };
     } else {
-      // For all other browsers, use beforeunload
       window.addEventListener("beforeunload", killDesktop);
-
       return () => {
         window.removeEventListener("beforeunload", killDesktop);
-        // Also kill desktop when component unmounts
         killDesktop();
       };
     }
   }, [sandboxId]);
 
   useEffect(() => {
-    // Initialize desktop and get stream URL when the component mounts
     const init = async () => {
       try {
         setIsInitializing(true);
-
-        // Use the provided ID or create a new one
         const { streamUrl, id } = await getDesktopURL(sandboxId ?? undefined);
-
         setStreamUrl(streamUrl);
         setSandboxId(id);
       } catch (err) {
@@ -160,7 +83,6 @@ export default function Chat() {
         setIsInitializing(false);
       }
     };
-
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -175,70 +97,26 @@ export default function Chat() {
       {/* Resizable Panels - Chat left, VNC right */}
       <div className="w-full hidden xl:block">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Chat Interface Panel (Left) */}
           <ResizablePanel
             defaultSize={30}
             minSize={25}
             className="flex flex-col border-r border-zinc-200"
           >
-            <div className="bg-white py-4 px-4 flex justify-between items-center">
-              <AISDKLogo />
-              <DeployButton />
-            </div>
-
-            <div
-              className="flex-1 space-y-6 py-4 overflow-y-auto px-4"
-              ref={desktopContainerRef}
-            >
-              {messages.length === 0 ? <ProjectInfo /> : null}
-              {messages.map((message, i) => (
-                <PreviewMessage
-                  message={message}
-                  key={message.id}
-                  isLoading={isLoading}
-                  status={status}
-                  isLatestMessage={i === messages.length - 1}
-                />
-              ))}
-              <div ref={desktopEndRef} className="pb-2" />
-            </div>
-
-            {messages.length === 0 && (
-              <PromptSuggestions
-                disabled={isInitializing}
-                submitPrompt={(prompt: string) =>
-                  append({ role: "user", content: prompt })
-                }
+            <div className="flex flex-col h-full">
+              <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0">
+                <AISDKLogo />
+                <DeployButton />
+              </div>
+              <Chat
+                sandboxId={sandboxId}
+                isInitializing={isInitializing}
               />
-            )}
-            <DebugPanel />
-            <div className="bg-white">
-              <form
-                onSubmit={(e) => {
-                  console.log(
-                    "[Page] User submitting message, input:",
-                    input?.slice(0, 80) +
-                      (input && input.length > 80 ? "..." : "")
-                  );
-                  handleSubmit(e);
-                }}
-                className="p-4"
-              >
-                <Input
-                  handleInputChange={handleInputChange}
-                  input={input}
-                  isInitializing={isInitializing}
-                  isLoading={isLoading}
-                  status={status}
-                  stop={stop}
-                />
-              </form>
+              <DebugPanel />
             </div>
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          {/* Desktop Stream Panel (Right) — memoized so it won't re-render on chat updates */}
           <ResizablePanel
             defaultSize={70}
             minSize={40}
@@ -257,49 +135,17 @@ export default function Chat() {
       </div>
 
       {/* Mobile View (Chat Only) */}
-      <div className="w-full xl:hidden flex flex-col">
-        <div className="bg-white py-4 px-4 flex justify-between items-center">
-          <AISDKLogo />
-          <DeployButton />
-        </div>
-
-        <div
-          className="flex-1 space-y-6 py-4 overflow-y-auto px-4"
-          ref={mobileContainerRef}
-        >
-          {messages.length === 0 ? <ProjectInfo /> : null}
-          {messages.map((message, i) => (
-            <PreviewMessage
-              message={message}
-              key={message.id}
-              isLoading={isLoading}
-              status={status}
-              isLatestMessage={i === messages.length - 1}
-            />
-          ))}
-          <div ref={mobileEndRef} className="pb-2" />
-        </div>
-
-        {messages.length === 0 && (
-          <PromptSuggestions
-            disabled={isInitializing}
-            submitPrompt={(prompt: string) =>
-              append({ role: "user", content: prompt })
-            }
+      <div className="w-full xl:hidden flex flex-col h-dvh">
+        <div className="flex flex-col h-full">
+          <div className="bg-white py-4 px-4 flex justify-between items-center shrink-0">
+            <AISDKLogo />
+            <DeployButton />
+          </div>
+          <Chat
+            sandboxId={sandboxId}
+            isInitializing={isInitializing}
           />
-        )}
-        <DebugPanel />
-        <div className="bg-white">
-          <form onSubmit={handleSubmit} className="p-4">
-            <Input
-              handleInputChange={handleInputChange}
-              input={input}
-              isInitializing={isInitializing}
-              isLoading={isLoading}
-              status={status}
-              stop={stop}
-            />
-          </form>
+          <DebugPanel />
         </div>
       </div>
     </div>
