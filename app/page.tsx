@@ -170,51 +170,14 @@ export default function Chat() {
         <span>Headless mode</span>
       </div>
 
-      {/* Resizable Panels */}
+      {/* Resizable Panels - Chat left, VNC right */}
       <div className="w-full hidden xl:block">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Desktop Stream Panel */}
-          <ResizablePanel
-            defaultSize={70}
-            minSize={40}
-            className="bg-black relative items-center justify-center"
-          >
-            {streamUrl ? (
-              <>
-                <iframe
-                  src={streamUrl}
-                  className="w-full h-full"
-                  style={{
-                    transformOrigin: "center",
-                    width: "100%",
-                    height: "100%",
-                  }}
-                  allow="autoplay"
-                />
-                <Button
-                  onClick={refreshDesktop}
-                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded text-sm z-10"
-                  disabled={isInitializing}
-                >
-                  {isInitializing ? "Creating desktop..." : "New desktop"}
-                </Button>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-white">
-                {isInitializing
-                  ? "Initializing desktop..."
-                  : "Loading stream..."}
-              </div>
-            )}
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          {/* Chat Interface Panel */}
+          {/* Chat Interface Panel (Left) */}
           <ResizablePanel
             defaultSize={30}
             minSize={25}
-            className="flex flex-col border-l border-zinc-200"
+            className="flex flex-col border-r border-zinc-200"
           >
             <div className="bg-white py-4 px-4 flex justify-between items-center">
               <AISDKLogo />
@@ -247,7 +210,17 @@ export default function Chat() {
               />
             )}
             <div className="bg-white">
-              <form onSubmit={handleSubmit} className="p-4">
+              <form
+                onSubmit={(e) => {
+                  console.log(
+                    "[Page] User submitting message, input:",
+                    input?.slice(0, 80) +
+                      (input && input.length > 80 ? "..." : "")
+                  );
+                  handleSubmit(e);
+                }}
+                className="p-4"
+              >
                 <Input
                   handleInputChange={handleInputChange}
                   input={input}
@@ -258,6 +231,43 @@ export default function Chat() {
                 />
               </form>
             </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Desktop Stream Panel (Right) */}
+          <ResizablePanel
+            defaultSize={70}
+            minSize={40}
+            className="bg-black relative items-center justify-center"
+          >
+            {streamUrl ? (
+              <>
+                <iframe
+                  src={streamUrl}
+                  className="w-full h-full"
+                  style={{
+                    transformOrigin: "center",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                  allow="autoplay"
+                />
+                <Button
+                  onClick={refreshDesktop}
+                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded text-sm z-10"
+                  disabled={isInitializing}
+                >
+                  {isInitializing ? "Creating desktop..." : "New desktop"}
+                </Button>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-white">
+                {isInitializing
+                  ? "Initializing desktop..."
+                  : "Loading stream..."}
+              </div>
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
