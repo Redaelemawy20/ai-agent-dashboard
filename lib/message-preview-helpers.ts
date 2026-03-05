@@ -9,13 +9,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ABORTED } from "@/lib/utils";
+import type { ToolResult, ToolArgs } from "@/lib/types";
 
-export function isToolResultAborted(result: unknown): boolean {
+export function isToolResultAborted(result: ToolResult | undefined): boolean {
   return result === ABORTED;
 }
 
 export function getToolResultImage(
-  result: unknown
+  result: ToolResult
 ): { type: "image"; data: string } | null {
   if (
     result != null &&
@@ -29,7 +30,7 @@ export function getToolResultImage(
   return null;
 }
 
-export function getToolResultText(result: unknown): string | null {
+export function getToolResultText(result: ToolResult): string | null {
   if (
     result != null &&
     typeof result === "object" &&
@@ -44,17 +45,17 @@ export function getToolResultText(result: unknown): string | null {
 /**
  * Returns the display string for a tool result (e.g. bash output).
  */
-export function formatToolResult(result: unknown): string | null {
+export function formatToolResult(result: ToolResult): string | null {
   if (result == null) return null;
-  if (typeof result === "string") return result;
   if (result === ABORTED) return ABORTED;
+  if (typeof result === "string") return result;
   const text = getToolResultText(result);
   return text != null ? text : null;
 }
 
 export function getComputerActionDisplay(
   action: string,
-  args: Record<string, unknown>,
+  args: ToolArgs,
 ): {
   actionLabel: string;
   actionDetail: string;

@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import type { UIMessage } from "ai";
 import { useToolStore } from "@/lib/stores/tool-store";
-
-export type ChatStatus = "streaming" | "submitted" | "ready" | "error";
+import type { ChatStatus } from "@/lib/types";
 
 export interface UseChatToolSyncParams {
   messages: UIMessage[];

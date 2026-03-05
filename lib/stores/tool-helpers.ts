@@ -1,5 +1,11 @@
 import type { Message } from "ai";
-import type { ToolEvent, EventStatus, ActionCounts } from "@/lib/types";
+import type {
+  ToolEvent,
+  ToolResult,
+  ToolArgs,
+  EventStatus,
+  ActionCounts,
+} from "@/lib/types";
 import { getActionKey } from "@/lib/types";
 
 export interface TimingEntry {
@@ -7,7 +13,10 @@ export interface TimingEntry {
   completedAt: number | null;
 }
 
-function deriveStatus(sdkState: string, result: unknown): EventStatus {
+function deriveStatus(
+  sdkState: string,
+  result: ToolResult | undefined
+): EventStatus {
   if (sdkState === "result") {
     if (
       result != null &&
@@ -62,7 +71,7 @@ export function syncToolEvents(
         result: hasResult ? inv.result : undefined,
       };
 
-      const args = inv.args as Record<string, unknown>;
+      const args = inv.args as ToolArgs;
 
       if (inv.toolName === "computer") {
         events.push({

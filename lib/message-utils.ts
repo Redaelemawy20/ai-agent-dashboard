@@ -7,7 +7,7 @@ export const prunedMessages = (messages: UIMessage[]): UIMessage[] => {
 
   return messages.map((message) => {
     // check if last message part is a tool invocation in a call state, then append a part with the tool result
-    message.parts = message.parts.map((part) => {
+    message.parts = (message.parts ?? []).map((part) => {
       if (part.type === "tool-invocation") {
         if (
           part.toolInvocation.toolName === "computer" &&

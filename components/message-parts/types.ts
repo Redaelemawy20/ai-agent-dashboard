@@ -1,11 +1,11 @@
-export type ChatStatus = "error" | "submitted" | "streaming" | "ready";
+import type { ToolResult, ToolArgs, ChatStatus } from "@/lib/types";
 
 export interface ToolInvocationPart {
   toolInvocation: {
     toolCallId: string;
     state: string;
-    args: Record<string, unknown>;
-    result?: unknown;
+    args: ToolArgs;
+    result?: ToolResult;
   };
 }
 

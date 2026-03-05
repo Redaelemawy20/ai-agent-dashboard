@@ -7,7 +7,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { isToolResultAborted } from "@/lib/message-preview-helpers";
 import { useToolStore } from "@/lib/stores/tool-store";
-import type { ChatStatus } from "./types";
+import type { ToolResult, ChatStatus } from "@/lib/types";
 
 const toolCardBaseClasses =
   "p-2 mb-3 text-sm rounded-md border text-left w-full transition-colors";
@@ -19,7 +19,7 @@ const toolCardDefaultClasses =
 export interface ToolInvocationCardProps {
   toolCallId: string;
   state: string;
-  result?: unknown;
+  result?: ToolResult;
   isLatestMessage: boolean;
   status: ChatStatus;
   children: ReactNode;

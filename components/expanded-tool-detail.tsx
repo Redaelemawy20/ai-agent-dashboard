@@ -1,12 +1,12 @@
 "use client";
 
 import { useToolStore } from "@/lib/stores/tool-store";
-import { isComputerEvent } from "@/lib/types";
+import { isComputerEvent, type EventStatus } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { formatToolResult, getToolResultImage } from "@/lib/message-preview-helpers";
 import { Camera, ScrollText, MousePointer, X } from "lucide-react";
 
-const STATUS_BADGE: Record<string, { bg: string; label: string }> = {
+const STATUS_BADGE: Record<EventStatus, { bg: string; label: string }> = {
   pending: { bg: "bg-amber-400", label: "Pending" },
   complete: { bg: "bg-green-500", label: "Complete" },
   error: { bg: "bg-red-500", label: "Error" },

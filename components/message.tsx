@@ -6,6 +6,7 @@ import { memo } from "react";
 import equal from "fast-deep-equal";
 
 import { cn } from "@/lib/utils";
+import type { ChatStatus } from "@/lib/types";
 import { BashToolPart } from "@/components/message-parts/bash-tool-part";
 import { ComputerToolPart } from "@/components/message-parts/computer-tool-part";
 import { TextPart } from "@/components/message-parts/text-part";
@@ -17,7 +18,7 @@ const PurePreviewMessage = ({
 }: {
   message: Message;
   isLoading: boolean;
-  status: "error" | "submitted" | "streaming" | "ready";
+  status: ChatStatus;
   isLatestMessage: boolean;
 }) => {
   return (

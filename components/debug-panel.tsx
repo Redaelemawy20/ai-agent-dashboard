@@ -2,7 +2,7 @@
 
 import { ChevronDown, Loader2 } from "lucide-react";
 import { useToolStore } from "@/lib/stores/tool-store";
-import type { ToolEvent } from "@/lib/types";
+import type { ToolEvent, EventStatus, AgentStatus } from "@/lib/types";
 
 function labelFor(event: ToolEvent): string {
   if (event.toolName === "bash") {
@@ -14,19 +14,19 @@ function labelFor(event: ToolEvent): string {
   return event.toolName;
 }
 
-const STATUS_DOT: Record<string, string> = {
+const STATUS_DOT: Record<EventStatus, string> = {
   pending: "bg-amber-400",
   complete: "bg-green-500",
   error: "bg-red-500",
 };
 
-const AGENT_LABEL: Record<string, string> = {
+const AGENT_LABEL: Record<AgentStatus, string> = {
   idle: "Idle",
   thinking: "Thinking…",
   executing: "Executing…",
 };
 
-const AGENT_COLOR: Record<string, string> = {
+const AGENT_COLOR: Record<AgentStatus, string> = {
   idle: "text-zinc-400",
   thinking: "text-amber-500",
   executing: "text-blue-500",

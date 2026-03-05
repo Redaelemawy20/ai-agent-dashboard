@@ -1,29 +1,43 @@
+import { ABORTED } from "@/lib/utils";
+
 export type EventStatus = "pending" | "complete" | "error";
 export type AgentStatus = "idle" | "thinking" | "executing";
+export type ChatStatus = "error" | "submitted" | "streaming" | "ready";
+
+/** Dynamic key-value args for tool invocations. */
+export type ToolArgs = Record<string, unknown>;
+
+/** Known shapes for tool invocation results (image, text, string, aborted, or error). */
+export type ToolResult =
+  | { type: "image"; data: string }
+  | { type: "text"; text: string }
+  | { error?: unknown }
+  | string
+  | typeof ABORTED;
 
 interface BaseEvent {
   toolCallId: string;
   timestamp: number;
   status: EventStatus;
   duration: number | null;
-  result?: unknown;
+  result?: ToolResult;
 }
 
 export interface ComputerEvent extends BaseEvent {
   toolName: "computer";
   action: string;
-  args: Record<string, unknown>;
+  args: ToolArgs;
 }
 
 export interface BashEvent extends BaseEvent {
   toolName: "bash";
   command: string;
-  args: Record<string, unknown>;
+  args: ToolArgs;
 }
 
 export interface UnknownToolEvent extends BaseEvent {
   toolName: string;
-  args: Record<string, unknown>;
+  args: ToolArgs;
 }
 
 export type ToolEvent = ComputerEvent | BashEvent | UnknownToolEvent;
