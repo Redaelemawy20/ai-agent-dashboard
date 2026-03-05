@@ -1,7 +1,9 @@
 "use client";
 
 import { useToolStore } from "@/lib/tool-store";
-import type { ToolEvent, ComputerEvent } from "@/lib/types";
+import { isComputerEvent } from "@/lib/types";
+import { formatDuration } from "@/lib/utils";
+import { formatToolResult, getToolResultImage } from "@/lib/message-preview-helpers";
 import { Camera, ScrollText, MousePointer, X } from "lucide-react";
 
 const STATUS_BADGE: Record<string, { bg: string; label: string }> = {
@@ -9,12 +11,6 @@ const STATUS_BADGE: Record<string, { bg: string; label: string }> = {
   complete: { bg: "bg-green-500", label: "Complete" },
   error: { bg: "bg-red-500", label: "Error" },
 };
-
-function formatDuration(ms: number | null): string {
-  if (ms === null) return "pending…";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
 
 interface ExpandedToolDetailProps {
   variant?: "inline" | "modal";
@@ -32,14 +28,12 @@ export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailPro
   if (!selected) return null;
 
   const isScreenshot =
-    selected.toolName === "computer" &&
-    (selected as ComputerEvent).action === "screenshot";
+    isComputerEvent(selected) && selected.action === "screenshot";
   const isBash = selected.toolName === "bash";
   const imageResult =
-    isScreenshot && selected.status === "complete" && selected.result
-      ? (selected.result as { type: string; data?: string })
-      : null;
-  const badge = STATUS_BADGE[selected.status];
+    selected.result != null ? getToolResultImage(selected.result) : null;
+  const badge =
+    STATUS_BADGE[selected.status] ?? { bg: "bg-zinc-500", label: "Unknown" };
 
   const wrapperClassName =
     variant === "modal"
@@ -59,9 +53,7 @@ export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailPro
           )}
           <span>
             {selected.toolName}
-            {selected.toolName === "computer"
-              ? ` / ${(selected as ComputerEvent).action}`
-              : ""}
+            {isComputerEvent(selected) ? ` / ${selected.action}` : ""}
           </span>
           <span className={`h-1.5 w-1.5 rounded-full ${badge.bg}`} />
           <span className="text-[10px] text-zinc-400">{badge.label}</span>
@@ -72,6 +64,7 @@ export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailPro
         <button
           onClick={() => selectToolCall(null)}
           className="p-1 hover:bg-zinc-700 rounded"
+          aria-label="Close"
         >
           <X className="h-4 w-4" />
         </button>
@@ -105,7 +98,7 @@ export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailPro
             <span className="text-zinc-400 uppercase tracking-wider text-[10px]">
               Result
             </span>
-            {imageResult?.type === "image" && imageResult.data ? (
+            {imageResult ? (
               <img
                 src={`data:image/png;base64,${imageResult.data}`}
                 alt="Screenshot"
@@ -113,9 +106,8 @@ export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailPro
               />
             ) : (
               <pre className="mt-1 p-2 bg-zinc-800 rounded overflow-x-auto max-h-40">
-                {typeof selected.result === "string"
-                  ? selected.result
-                  : JSON.stringify(selected.result, null, 2)}
+                {formatToolResult(selected.result) ??
+                  JSON.stringify(selected.result, null, 2)}
               </pre>
             )}
           </div>

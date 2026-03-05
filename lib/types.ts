@@ -29,6 +29,10 @@ export interface UnknownToolEvent extends BaseEvent {
 export type ToolEvent = ComputerEvent | BashEvent | UnknownToolEvent;
 export type ActionCounts = Record<string, number>;
 
+export function isComputerEvent(event: ToolEvent): event is ComputerEvent {
+  return event.toolName === "computer";
+}
+
 export function getActionKey(event: ToolEvent): string {
   if (event.toolName === "computer") return (event as ComputerEvent).action;
   if (event.toolName === "bash") return "bash";
