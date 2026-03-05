@@ -2,14 +2,13 @@
 
 import { useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
-import type { UIMessage } from "ai";
 import { toast } from "sonner";
-import { loadMessages } from "@/lib/session-store";
+import { loadMessages } from "@/lib/stores/session-helpers";
 import { PreviewMessage } from "@/components/message";
-import { Input } from "@/components/input";
+import { ChatInput } from "@/components/chat-input";
 import { ProjectInfo } from "@/components/project-info";
 import { PromptSuggestions } from "@/components/prompt-suggestions";
-import { useScrollToBottom } from "@/lib/use-scroll-to-bottom";
+import { useScrollToBottom } from "@/lib/hooks/use-scroll-to-bottom";
 import { useStopWithAbort } from "@/lib/hooks/use-stop-with-abort";
 import { useChatSessionSync } from "@/lib/hooks/use-chat-session-sync";
 import { useChatToolSync } from "@/lib/hooks/use-chat-tool-sync";
@@ -28,7 +27,7 @@ export function Chat({
   const [containerRef, endRef] = useScrollToBottom();
 
   const initialMessages = useMemo(
-    () => (sessionId ? (loadMessages(sessionId) as UIMessage[]) : []),
+    () => (sessionId ? loadMessages(sessionId) : []),
     [sessionId]
   );
 
@@ -100,7 +99,7 @@ export function Chat({
 
       <div className="bg-white shrink-0">
         <form onSubmit={handleSubmit} className="p-4">
-          <Input
+          <ChatInput
             handleInputChange={handleInputChange}
             input={input}
             isInitializing={isInitializing}

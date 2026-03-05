@@ -6,7 +6,7 @@ import {
   useSessionStore,
   createNewSession,
   type Session,
-} from "@/lib/session-store";
+} from "@/lib/stores/session-store";
 import { cn } from "@/lib/utils";
 
 export interface SessionSidebarProps {

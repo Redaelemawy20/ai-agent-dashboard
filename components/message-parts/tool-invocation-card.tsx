@@ -6,7 +6,7 @@ import { CheckCircle, CircleSlash, Loader2, StopCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { isToolResultAborted } from "@/lib/message-preview-helpers";
-import { useToolStore } from "@/lib/tool-store";
+import { useToolStore } from "@/lib/stores/tool-store";
 import type { ChatStatus } from "./types";
 
 const toolCardBaseClasses =

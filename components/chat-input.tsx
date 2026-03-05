@@ -1,5 +1,5 @@
 import { ArrowUp } from "lucide-react";
-import { Input as ShadcnInput } from "./ui/input";
+import { Input } from "./ui/input";
 
 interface InputProps {
   input: string;
@@ -10,7 +10,7 @@ interface InputProps {
   stop: () => void;
 }
 
-export const Input = ({
+export const ChatInput = ({
   input,
   handleInputChange,
   isInitializing,
@@ -20,7 +20,7 @@ export const Input = ({
 }: InputProps) => {
   return (
     <div className="relative w-full">
-      <ShadcnInput
+      <Input
         className="bg-secondary py-6 w-full rounded-xl pr-12"
         value={input}
         autoFocus

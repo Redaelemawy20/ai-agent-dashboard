@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Loader2 } from "lucide-react";
-import { useToolStore } from "@/lib/tool-store";
+import { useToolStore } from "@/lib/stores/tool-store";
 import type { ToolEvent } from "@/lib/types";
 
 function labelFor(event: ToolEvent): string {

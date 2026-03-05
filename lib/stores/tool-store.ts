@@ -1,12 +1,11 @@
 import { create } from "zustand";
 import type { Message } from "ai";
 import type { ToolEvent, ActionCounts, AgentStatus } from "@/lib/types";
-import { syncToolEvents, countByAction } from "@/lib/helpers";
-
-interface TimingEntry {
-  firstSeen: number;
-  completedAt: number | null;
-}
+import {
+  syncToolEvents,
+  countByAction,
+  type TimingEntry,
+} from "./tool-helpers";
 
 interface ToolStore {
   toolCalls: ToolEvent[];

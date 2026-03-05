@@ -2,14 +2,12 @@
 
 import { useEffect } from "react";
 import type { UIMessage } from "ai";
-import {
-  saveMessages,
-  useSessionStore,
-} from "@/lib/session-store";
+import { useSessionStore } from "@/lib/stores/session-store";
+import { saveMessages } from "@/lib/stores/session-helpers";
 import {
   extractTitleFromFirstUserMessage,
   pruneMessagesForStorage,
-} from "@/lib/utils";
+} from "@/lib/message-utils";
 
 export interface UseChatSessionSyncParams {
   sessionId: string | null;

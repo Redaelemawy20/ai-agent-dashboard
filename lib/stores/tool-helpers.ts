@@ -2,7 +2,7 @@ import type { Message } from "ai";
 import type { ToolEvent, EventStatus, ActionCounts } from "@/lib/types";
 import { getActionKey } from "@/lib/types";
 
-interface TimingEntry {
+export interface TimingEntry {
   firstSeen: number;
   completedAt: number | null;
 }

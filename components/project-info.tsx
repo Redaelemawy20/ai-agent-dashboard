@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { VercelIcon } from "./icons";
+import { VercelIcon } from "./ui/icons";
 import { ComputerIcon } from "lucide-react";
 import Link from "next/link";
 

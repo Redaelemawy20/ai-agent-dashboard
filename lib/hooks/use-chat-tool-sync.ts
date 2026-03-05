@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { UIMessage } from "ai";
-import { useToolStore } from "@/lib/tool-store";
+import { useToolStore } from "@/lib/stores/tool-store";
 
 export type ChatStatus = "streaming" | "submitted" | "ready" | "error";
 

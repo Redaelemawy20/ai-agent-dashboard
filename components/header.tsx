@@ -2,7 +2,7 @@
 
 import { Menu, Monitor, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AISDKLogo } from "@/components/icons";
+import { AISDKLogo } from "@/components/ui/icons";
 import { DeployButton } from "@/components/project-info";
 import { cn } from "@/lib/utils";
 

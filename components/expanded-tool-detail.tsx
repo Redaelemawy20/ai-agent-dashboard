@@ -1,6 +1,6 @@
 "use client";
 
-import { useToolStore } from "@/lib/tool-store";
+import { useToolStore } from "@/lib/stores/tool-store";
 import { isComputerEvent } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
 import { formatToolResult, getToolResultImage } from "@/lib/message-preview-helpers";

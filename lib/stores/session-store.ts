@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { clearMessages } from "./session-helpers";
 
 const STORAGE_KEY = "computer-use-sessions";
 
@@ -25,6 +26,14 @@ interface SessionStore {
 
 function generateId(): string {
   return crypto.randomUUID();
+}
+
+export function createNewSession(): Session {
+  return {
+    id: generateId(),
+    title: "New chat",
+    createdAt: Date.now(),
+  };
 }
 
 export const useSessionStore = create<SessionStore>()(
@@ -82,46 +91,3 @@ export const useSessionStore = create<SessionStore>()(
     }
   )
 );
-
-export function createNewSession(): Session {
-  return {
-    id: generateId(),
-    title: "New chat",
-    createdAt: Date.now(),
-  };
-}
-
-const MESSAGES_KEY_PREFIX = "chat-messages-";
-
-export function getMessagesKey(sessionId: string): string {
-  return `${MESSAGES_KEY_PREFIX}${sessionId}`;
-}
-
-export function loadMessages(sessionId: string): unknown[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(getMessagesKey(sessionId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveMessages(sessionId: string, messages: unknown[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(
-      getMessagesKey(sessionId),
-      JSON.stringify(messages)
-    );
-  } catch (e) {
-    console.error("Failed to save messages:", e);
-  }
-}
-
-export function clearMessages(sessionId: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(getMessagesKey(sessionId));
-}
