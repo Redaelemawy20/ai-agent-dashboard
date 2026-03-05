@@ -1,3 +1,5 @@
+**Author:** Reda Ahmed Kotb
+
 <a href="https://ai-sdk-computer-use.vercel.app">
   <h1 align="center">AI SDK Computer Use Demo</h1>
 </a>
@@ -114,13 +116,140 @@ Open [http://localhost:3000](http://localhost:3000) to use the computer use agen
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
-| `SANDBOX_SNAPSHOT_ID` | Yes | Vercel Sandbox snapshot with the desktop environment |
-| `VERCEL_OIDC_TOKEN` | Yes* | Auto-set by `vercel env pull` for Sandbox auth |
-| `VERCEL_TOKEN` | Alt* | Alternative to OIDC — a Vercel personal access token |
-| `VERCEL_TEAM_ID` | Alt* | Required with `VERCEL_TOKEN` |
-| `VERCEL_PROJECT_ID` | Alt* | Required with `VERCEL_TOKEN` |
+| Variable              | Required | Description                                          |
+| --------------------- | -------- | ---------------------------------------------------- |
+| `ANTHROPIC_API_KEY`   | Yes      | Anthropic API key for Claude                         |
+| `SANDBOX_SNAPSHOT_ID` | Yes      | Vercel Sandbox snapshot with the desktop environment |
+| `VERCEL_OIDC_TOKEN`   | Yes\*    | Auto-set by `vercel env pull` for Sandbox auth       |
+| `VERCEL_TOKEN`        | Alt\*    | Alternative to OIDC — a Vercel personal access token |
+| `VERCEL_TEAM_ID`      | Alt\*    | Required with `VERCEL_TOKEN`                         |
+| `VERCEL_PROJECT_ID`   | Alt\*    | Required with `VERCEL_TOKEN`                         |
 
 \* Either `VERCEL_OIDC_TOKEN` (via `vercel env pull`) or the `VERCEL_TOKEN` + team/project IDs are required for Sandbox authentication.
+
+---
+
+## Submission Details
+
+Implementation for the [Senior Frontend Engineer AI Agent Dashboard](.agents/skills/docs.md) task.
+
+### Features and What Was Done
+
+#### 1. Two-panel layout
+
+The interface was reorganized from the original (VNC left, chat right) into a left/right split. The **left panel** holds the session sidebar, chat with streaming messages, inline tool call cards, and a collapsible debug panel at the bottom. The **right panel** shows the VNC viewer and expanded tool details when a tool call is selected. Panels use `ResizablePanelGroup` for horizontal resizing, with min sizes 25% / 40%, and support desktop and tablet viewports.
+
+#### 2. Tool call visualization
+
+Each tool call is rendered as an interactive card in the chat. Cards show **type** (computer action or bash), **status** (pending/complete/error with colored indicators), and **duration**. Screenshots appear as thumbnails in the card; bash shows the command and output; computer actions show the action type and target. Cards are clickable—selecting one opens its full details (args, result, full-size image) in the right panel.
+
+#### 3. Event pipeline and state management
+
+A structured event system captures all agent activity. The event store uses discriminated unions (`ComputerEvent`, `BashEvent`, `UnknownToolEvent`) with `toolCallId`, `timestamp`, `toolName`, `args`, `status`, and `duration`. Derived state includes a chronological event list, per-action counts (screenshot, click, type, bash), and agent status (idle/thinking/executing). A collapsible debug panel shows event counts and a timeline; clicking an event selects it for the expanded detail view.
+
+#### 4. React performance
+
+The VNC component is wrapped in `memo()` so it does not re-render when chat messages update. Chat and VNC live in separate panels with stable props (`streamUrl`, `isInitializing`, `onRefreshDesktop`). SessionSidebar, DebugPanel, ExpandedToolDetail, and tool parts are memoized where it helps.
+
+#### 5. TypeScript standards
+
+The codebase avoids `any`. Event types use discriminated unions. Props, state, and API responses are properly typed, with type guards such as `isComputerEvent` and `getActionKey`.
+
+#### 6. Streaming and API integration
+
+Existing AI SDK streaming is preserved. Messages and tool invocations are handled with proper typing. `syncToolEvents` derives status from `state` and `result` (pending/complete/error). The tool lifecycle is handled: initiated → executing → completed/failed. API errors surface via toast notifications.
+
+#### 7. Chat history and multiple sessions
+
+Users can create, switch, and delete chat sessions. The session list appears in the sidebar. Sessions and active session ID persist in localStorage via Zustand. Messages are stored per session ID; switching sessions loads that session’s messages and resets the tool store.
+
+#### 8. Mobile support (bonus)
+
+The layout is responsive: at the `xl` breakpoint it switches to a mobile layout with a header toggle to switch between Chat and VNC views. Expanded tool details appear in a modal instead of the right panel. The session sidebar becomes an overlay with a close action.
+
+### Frontend Flow Diagrams
+
+#### Page layout (desktop xl+)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  ResizablePanelGroup (horizontal)                                    │
+├──────────────────────────────┬──────────────────────────────────────┤
+│  LEFT PANEL (30% default)    │  RIGHT PANEL (70% default)            │
+│ ┌────────┬─────────────────┐ │ ┌──────────────────────────────────┐ │
+│ │Session │ Header          │ │ │ VncPanel (VNC iframe)             │ │
+│ │Sidebar │─────────────────│ │ │                                  │ │
+│ │        │ Chat            │ │ └──────────────────────────────────┘ │
+│ │        │ (messages +     │ │ ┌──────────────────────────────────┐ │
+│ │        │  tool parts)    │ │ │ ExpandedToolDetail (when selected)│ │
+│ │        │─────────────────│ │ └──────────────────────────────────┘ │
+│ │        │ DebugPanel      │ │                                      │
+│ └────────┴─────────────────┘ │                                      │
+└──────────────────────────────┴──────────────────────────────────────┘
+```
+
+#### Message → tool store → UI flow
+
+```
+useChat (messages, status)
+       │
+       ▼
+useChatToolSync ──► syncToolEvents(messages) ──► tool-store
+       │                                                    │
+       │                                                    ├──► toolCalls[]
+       │                                                    ├──► actionCounts
+       │                                                    ├──► agentStatus
+       │                                                    └──► selectedToolCallId
+       │                                                              │
+       │                    ┌─────────────────────────────────────────┘
+       ▼                    ▼
+PreviewMessage         DebugPanel (event timeline)
+  └─► tool parts           ExpandedToolDetail
+      (ComputerToolPart,
+       BashToolPart)
+      click ──────────────────► selectToolCall(id)
+```
+
+#### Session flow
+
+```
+SessionSidebar                    session-store (Zustand + persist)
+     │                                    │
+     ├─ New chat ──────────────────────► addSession()
+     ├─ Click session ─────────────────► setActiveSession(id)
+     └─ Delete ────────────────────────► deleteSession(id)
+                                                 │
+                                                 ▼
+Chat (sessionId) ◄── activeSessionId     session-helpers
+     │                                         │
+     └─ loadMessages(sessionId) ◄──────────────┘
+     └─ saveMessages(sessionId) ──────────────► localStorage
+```
+
+#### Tool call click → expanded detail flow
+
+```
+ToolInvocationCard (in chat)
+     │
+     │  onClick
+     ▼
+selectToolCall(toolCallId) ──► tool-store.selectedToolCallId
+                                        │
+                    ┌───────────────────┴───────────────────┐
+                    ▼                                       ▼
+              DebugPanel                            ExpandedToolDetail
+         (highlights selected)                    (args, result, image)
+```
+
+### Feature Summary
+
+| Requirement                          | Status | Notes                                                                          |
+| ------------------------------------ | ------ | ------------------------------------------------------------------------------ |
+| 1. Two-panel layout                  | ✓      | Left: sidebar, chat, debug panel. Right: VNC, expanded tool detail. Resizable. |
+| 2. Tool call visualization           | ✓      | Interactive cards, type/status/duration, thumbnails, click → right panel.      |
+| 3. Event pipeline & state management | ✓      | Event store, discriminated unions, derived state, collapsible debug panel.     |
+| 4. React performance                 | ✓      | VNC memoized, no re-renders from chat.                                         |
+| 5. TypeScript standards              | ✓      | No `any`, discriminated unions, full typing.                                   |
+| 6. Streaming & API integration       | ✓      | Streaming preserved, tool lifecycle, error handling.                           |
+| 7. Chat history & multiple sessions  | ✓      | Create/switch/delete, localStorage, session sidebar.                           |
+| 8. Mobile support (bonus)            | ✓      | Responsive, Chat/VNC toggle, tool detail modal, sidebar overlay.               |
