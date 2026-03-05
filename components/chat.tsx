@@ -12,6 +12,7 @@ import { useScrollToBottom } from "@/lib/hooks/use-scroll-to-bottom";
 import { useStopWithAbort } from "@/lib/hooks/use-stop-with-abort";
 import { useChatSessionSync } from "@/lib/hooks/use-chat-session-sync";
 import { useChatToolSync } from "@/lib/hooks/use-chat-tool-sync";
+import { getChatErrorMessage } from "@/lib/utils";
 
 export interface ChatContentProps {
   sessionId: string | null;
@@ -48,8 +49,9 @@ export function Chat({
     maxSteps: 30,
     onError: (error) => {
       console.error("[Chat] useChat onError:", error);
-      toast.error("There was an error", {
-        description: "Please try again later.",
+      const { title, description } = getChatErrorMessage(error);
+      toast.error(title, {
+        description,
         richColors: true,
         position: "top-center",
       });
@@ -82,7 +84,15 @@ export function Chat({
         className="flex-1 space-y-6 py-4 overflow-y-auto px-4 min-h-0"
         ref={containerRef}
       >
-        {messages.length === 0 ? <ProjectInfo /> : null}
+        {messages.length === 0 ? (
+          <>
+            <ProjectInfo />
+            <p className="px-4 text-center text-sm text-zinc-500">
+              Send a message below to get started. Once you&apos;ve started a
+              conversation, you can create new chats.
+            </p>
+          </>
+        ) : null}
         {messages.map((message, i) => (
           <PreviewMessage
             message={message}

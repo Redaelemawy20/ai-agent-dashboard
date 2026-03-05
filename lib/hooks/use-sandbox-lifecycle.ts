@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getDesktopURL } from "@/lib/sandbox/utils";
 import { killDesktopApi } from "@/lib/sandbox/client";
+import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+
+const SANDBOX_DEBOUNCE_MS = 400;
 
 export interface UseSandboxLifecycleParams {
   activeSessionId: string | null;
@@ -28,27 +31,38 @@ export function useSandboxLifecycle({
   const prevActiveSessionIdRef = useRef<string | null>(null);
   const sandboxIdRef = useRef<string | null>(null);
   sandboxIdRef.current = sandboxId;
+  const initInFlightRef = useRef(false);
 
   const onSessionSwitchRef = useRef(onSessionSwitch);
   onSessionSwitchRef.current = onSessionSwitch;
 
-  // Sandbox lifecycle: create when active session exists, kill previous when switching
+  const debouncedSessionId = useDebouncedValue(
+    activeSessionId,
+    SANDBOX_DEBOUNCE_MS
+  );
+
+  // Reset tool store immediately when session changes (no debounce)
   useEffect(() => {
     if (!activeSessionId) return;
-
-    const prevSessionId = prevActiveSessionIdRef.current;
+    const prev = prevActiveSessionIdRef.current;
     prevActiveSessionIdRef.current = activeSessionId;
-
-    if (prevSessionId !== activeSessionId) {
+    if (prev !== activeSessionId) {
       onSessionSwitchRef.current?.();
     }
+  }, [activeSessionId]);
+
+  // Sandbox lifecycle: debounced kill + create when session settles
+  useEffect(() => {
+    if (!debouncedSessionId) return;
+    if (initInFlightRef.current) return;
 
     let cancelled = false;
     const prevSandboxId = sandboxIdRef.current;
+    initInFlightRef.current = true;
 
     const init = async () => {
-      if (prevSandboxId && prevSessionId !== activeSessionId) {
-        await killDesktopApi(prevSandboxId);
+      if (prevSandboxId) {
+        killDesktopApi(prevSandboxId).catch(() => {});
       }
 
       try {
@@ -66,6 +80,7 @@ export function useSandboxLifecycle({
         }
       } finally {
         if (!cancelled) setIsInitializing(false);
+        initInFlightRef.current = false;
       }
     };
 
@@ -73,10 +88,15 @@ export function useSandboxLifecycle({
     return () => {
       cancelled = true;
     };
-  }, [activeSessionId]);
+  }, [debouncedSessionId]);
 
   const refreshDesktop = useCallback(async () => {
+    if (initInFlightRef.current) {
+      toast.error("Please wait for the desktop to finish loading");
+      return;
+    }
     try {
+      initInFlightRef.current = true;
       setIsInitializing(true);
       if (sandboxId) await killDesktopApi(sandboxId);
       const { streamUrl: url, id } = await getDesktopURL();
@@ -84,8 +104,10 @@ export function useSandboxLifecycle({
       setSandboxId(id);
     } catch (err) {
       console.error("Failed to refresh desktop:", err);
+      toast.error("Failed to refresh desktop");
     } finally {
       setIsInitializing(false);
+      initInFlightRef.current = false;
     }
   }, [sandboxId]);
 

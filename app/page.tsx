@@ -70,11 +70,13 @@ export default function ChatPage() {
               )}
               <div className="flex flex-col h-full flex-1 min-w-0">
                 <Header onMenuClick={toggleSidebarDesktop} />
-                <Chat
-                  sessionId={activeSessionId}
-                  sandboxId={sandboxId}
-                  isInitializing={isInitializing}
-                />
+                {activeSessionId && (
+                  <Chat
+                    key={activeSessionId}
+                    sessionId={activeSessionId}
+                    sandboxId={sandboxId}
+                    isInitializing={isInitializing}
+                  />)}
                 <DebugPanel />
               </div>
             </div>
@@ -120,11 +122,18 @@ export default function ChatPage() {
             </div>
           ) : (
             <div className="flex flex-col flex-1 min-w-0 h-full min-h-0">
-              <Chat
-                sessionId={activeSessionId}
-                sandboxId={sandboxId}
-                isInitializing={isInitializing}
-              />
+              {activeSessionId ? (
+                <Chat
+                  key={activeSessionId}
+                  sessionId={activeSessionId}
+                  sandboxId={sandboxId}
+                  isInitializing={isInitializing}
+                />
+              ) : (
+                <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">
+                  Create a chat to get started.
+                </div>
+              )}
               <DebugPanel />
             </div>
           )}
@@ -145,7 +154,10 @@ export default function ChatPage() {
           isOpen={sidebarOpenMobile}
           onClose={closeSidebarOverlay}
         >
-          <SessionSidebar isInitializing={isInitializing} />
+          <SessionSidebar
+            isInitializing={isInitializing}
+            onSessionSelect={closeSidebarOverlay}
+          />
         </SidebarOverlay>
       </div>
     </div>

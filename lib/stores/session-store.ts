@@ -48,21 +48,40 @@ export const useSessionStore = create<SessionStore>()(
         set((state) => ({
           sessions: [session, ...state.sessions],
           activeSessionId: session.id,
+          activeSessionHasMessages: false,
         })),
 
       deleteSession: (id) => {
         clearMessages(id);
         set((state) => {
           const sessions = state.sessions.filter((s) => s.id !== id);
-          const activeSessionId =
-            state.activeSessionId === id
-              ? sessions[0]?.id ?? null
-              : state.activeSessionId;
-          return { sessions, activeSessionId };
+          // If there are no sessions left, create a new one
+          if (sessions.length === 0) {
+            const newSession = createNewSession();
+            return {
+              sessions: [newSession],
+              activeSessionId: newSession.id,
+              activeSessionHasMessages: false,
+            };
+          }
+          // If the active session is being deleted, set the next session as active
+          const isDeletingActive = state.activeSessionId === id;
+          const nextActiveSessionId = sessions[0]?.id ?? null;
+          const activeSessionId = isDeletingActive
+            ? nextActiveSessionId
+            : state.activeSessionId;
+          return {
+            sessions,
+            activeSessionId,
+            activeSessionHasMessages: isDeletingActive
+              ? false
+              : state.activeSessionHasMessages,
+          };
         });
       },
 
-      setActiveSession: (id) => set({ activeSessionId: id }),
+      setActiveSession: (id) =>
+        set({ activeSessionId: id, activeSessionHasMessages: false }),
 
       setActiveSessionHasMessages: (has) =>
         set({ activeSessionHasMessages: has }),
@@ -72,7 +91,7 @@ export const useSessionStore = create<SessionStore>()(
       updateSessionTitle: (id, title) =>
         set((state) => ({
           sessions: state.sessions.map((s) =>
-            s.id === id ? { ...s, title } : s
+            s.id === id ? { ...s, title } : s,
           ),
         })),
     }),
@@ -86,8 +105,16 @@ export const useSessionStore = create<SessionStore>()(
         state?.setHasHydrated(true);
         if (state && state.sessions.length === 0) {
           state.addSession(createNewSession());
+        } else if (state && state.activeSessionId) {
+          // If the active session is orphaned, set the first session as active
+          const isOrphaned = !state.sessions.some(
+            (s) => s.id === state.activeSessionId,
+          );
+          if (isOrphaned) {
+            state.setActiveSession(state.sessions[0]?.id ?? null);
+          }
         }
       },
-    }
-  )
+    },
+  ),
 );

@@ -12,9 +12,13 @@ import { cn } from "@/lib/utils";
 
 export interface SessionSidebarProps {
   isInitializing?: boolean;
+  onSessionSelect?: () => void;
 }
 
-export const SessionSidebar = memo(function SessionSidebar({ isInitializing = false }: SessionSidebarProps) {
+export const SessionSidebar = memo(function SessionSidebar({
+  isInitializing = false,
+  onSessionSelect,
+}: SessionSidebarProps) {
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSessionHasMessages = useSessionStore(
@@ -32,11 +36,13 @@ export const SessionSidebar = memo(function SessionSidebar({ isInitializing = fa
     if (!canNewChat) return;
     const session = createNewSession();
     addSession(session);
+    onSessionSelect?.();
   };
 
   const handleSelectSession = (session: Session) => {
     if (!canSwitchSession || session.id === activeSessionId) return;
     setActiveSession(session.id);
+    onSessionSelect?.();
   };
 
   const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
@@ -64,13 +70,8 @@ export const SessionSidebar = memo(function SessionSidebar({ isInitializing = fa
         New chat
       </Button>
       <div className="flex-1 overflow-y-auto min-h-0 px-1">
-        {sessions.length === 0 ? (
-          <p className="px-3 py-4 text-xs text-zinc-500">
-            No chats yet. Start a new one.
-          </p>
-        ) : (
-          <ul className="space-y-0.5 pb-2">
-            {sessions.map((session) => (
+        <ul className="space-y-0.5 pb-2">
+          {sessions.map((session) => (
               <li key={session.id}>
                 <div
                   role="button"
@@ -119,9 +120,8 @@ export const SessionSidebar = memo(function SessionSidebar({ isInitializing = fa
                   </button>
                 </div>
               </li>
-            ))}
-          </ul>
-        )}
+          ))}
+        </ul>
       </div>
     </div>
   );
