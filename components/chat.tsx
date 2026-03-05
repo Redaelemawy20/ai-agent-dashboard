@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
 import { loadMessages } from "@/lib/stores/session-helpers";
@@ -71,6 +71,11 @@ export function Chat({
 
   const isLoading = status !== "ready";
 
+  const submitPrompt = useCallback(
+    (prompt: string) => append({ role: "user", content: prompt }),
+    [append]
+  );
+
   return (
     <>
       <div
@@ -93,7 +98,7 @@ export function Chat({
       {messages.length === 0 && (
         <PromptSuggestions
           disabled={isInitializing}
-          submitPrompt={(prompt) => append({ role: "user", content: prompt })}
+          submitPrompt={submitPrompt}
         />
       )}
 

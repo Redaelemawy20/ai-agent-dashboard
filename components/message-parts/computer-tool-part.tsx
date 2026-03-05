@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   getComputerActionDisplay,
   getToolResultImage,
@@ -8,7 +9,7 @@ import {
 import { ToolInvocationCard } from "./tool-invocation-card";
 import type { ToolPartProps } from "./types";
 
-export function ComputerToolPart({
+export const ComputerToolPart = memo(function ComputerToolPart({
   part,
   isLatestMessage,
   status,
@@ -72,4 +73,4 @@ export function ComputerToolPart({
       ) : null}
     </ToolInvocationCard>
   );
-}
+});

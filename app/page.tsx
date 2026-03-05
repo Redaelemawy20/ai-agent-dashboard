@@ -8,7 +8,7 @@ import { useSessionStore } from "@/lib/stores/session-store";
 import { useToolStore } from "@/lib/stores/tool-store";
 import { useSandboxLifecycle } from "@/lib/hooks/use-sandbox-lifecycle";
 import { usePageUnloadCleanup } from "@/lib/hooks/use-page-unload-cleanup";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { VncPanel } from "@/components/vnc-panel";
 import { ExpandedToolDetail } from "@/components/expanded-tool-detail";
 import { Modal } from "@/components/ui/modal";
@@ -38,6 +38,21 @@ export default function ChatPage() {
 
   usePageUnloadCleanup(sandboxId);
 
+  const toggleSidebarDesktop = useCallback(
+    () => setSidebarCollapsedDesktop((v) => !v),
+    []
+  );
+  const toggleSidebarMobile = useCallback(
+    () => setSidebarOpenMobile((v) => !v),
+    []
+  );
+  const toggleVncOnMobile = useCallback(
+    () => setShowVncOnMobile((v) => !v),
+    []
+  );
+  const closeToolDetailModal = useCallback(() => selectToolCall(null), [selectToolCall]);
+  const closeSidebarOverlay = useCallback(() => setSidebarOpenMobile(false), []);
+
   return (
     <div className="flex h-dvh relative">
       {/* Desktop layout */}
@@ -54,9 +69,7 @@ export default function ChatPage() {
                 <SessionSidebar isInitializing={isInitializing} />
               )}
               <div className="flex flex-col h-full flex-1 min-w-0">
-                <Header
-                  onMenuClick={() => setSidebarCollapsedDesktop((v) => !v)}
-                />
+                <Header onMenuClick={toggleSidebarDesktop} />
                 <Chat
                   sessionId={activeSessionId}
                   sandboxId={sandboxId}
@@ -89,9 +102,9 @@ export default function ChatPage() {
       {/* Mobile layout */}
       <div className="w-full xl:hidden flex flex-col h-dvh">
         <Header
-          onMenuClick={() => setSidebarOpenMobile((v) => !v)}
+          onMenuClick={toggleSidebarMobile}
           showVncOnMobile={showVncOnMobile}
-          onViewToggle={() => setShowVncOnMobile((v) => !v)}
+          onViewToggle={toggleVncOnMobile}
           className="border-b border-zinc-200"
         />
         <div className="flex flex-1 min-h-0 min-w-0">
@@ -121,7 +134,7 @@ export default function ChatPage() {
       <div className="xl:hidden">
         <Modal
           isOpen={!!selectedToolCallId}
-          onClose={() => selectToolCall(null)}
+          onClose={closeToolDetailModal}
         >
           <ExpandedToolDetail variant="modal" />
         </Modal>
@@ -130,7 +143,7 @@ export default function ChatPage() {
       <div className="xl:hidden">
         <SidebarOverlay
           isOpen={sidebarOpenMobile}
-          onClose={() => setSidebarOpenMobile(false)}
+          onClose={closeSidebarOverlay}
         >
           <SessionSidebar isInitializing={isInitializing} />
         </SidebarOverlay>

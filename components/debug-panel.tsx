@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { useToolStore } from "@/lib/stores/tool-store";
 import type { ToolEvent, EventStatus, AgentStatus } from "@/lib/types";
@@ -32,12 +33,19 @@ const AGENT_COLOR: Record<AgentStatus, string> = {
   executing: "text-blue-500",
 };
 
-export function DebugPanel() {
+export const DebugPanel = memo(function DebugPanel() {
   const toolCalls = useToolStore((s) => s.toolCalls);
   const actionCounts = useToolStore((s) => s.actionCounts);
   const agentStatus = useToolStore((s) => s.agentStatus);
   const selectedId = useToolStore((s) => s.selectedToolCallId);
   const selectToolCall = useToolStore((s) => s.selectToolCall);
+
+  const handleSelect = useCallback(
+    (id: string) => {
+      selectToolCall(selectedId === id ? null : id);
+    },
+    [selectedId, selectToolCall]
+  );
 
   return (
     <details className="group shrink-0 border-t border-zinc-200 bg-zinc-50">
@@ -83,9 +91,7 @@ export function DebugPanel() {
           toolCalls.map((tc) => (
             <button
               key={tc.toolCallId}
-              onClick={() =>
-                selectToolCall(selectedId === tc.toolCallId ? null : tc.toolCallId)
-              }
+              onClick={() => handleSelect(tc.toolCallId)}
               className={`flex items-center gap-2 w-full px-4 py-1.5 text-left text-xs hover:bg-zinc-100 transition-colors ${selectedId === tc.toolCallId
                   ? "bg-blue-50 text-blue-700"
                   : "text-zinc-600"
@@ -101,4 +107,4 @@ export function DebugPanel() {
       </div>
     </details>
   );
-}
+});

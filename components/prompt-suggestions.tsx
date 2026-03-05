@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Button } from "./ui/button";
 
@@ -29,13 +30,13 @@ const suggestions = [
   // },
 ];
 
-export const PromptSuggestions = ({
+export const PromptSuggestions = memo(function PromptSuggestions({
   submitPrompt,
   disabled,
 }: {
   submitPrompt: (prompt: string) => void;
   disabled: boolean;
-}) => {
+}) {
   return (
     <div className="flex flex-wrap items-center gap-3 px-4">
       {suggestions.map((suggestion, index) => (
@@ -56,4 +57,4 @@ export const PromptSuggestions = ({
       ))}
     </div>
   );
-};
+});

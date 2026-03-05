@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { Message } from "ai";
 import { motion } from "motion/react";
 import { Streamdown } from "streamdown";
@@ -10,7 +11,7 @@ export interface TextPartProps {
   part: { type: "text"; text: string };
 }
 
-export function TextPart({ message, part }: TextPartProps) {
+export const TextPart = memo(function TextPart({ message, part }: TextPartProps) {
   return (
     <motion.div
       initial={{ y: 5, opacity: 0 }}
@@ -27,4 +28,4 @@ export function TextPart({ message, part }: TextPartProps) {
       </div>
     </motion.div>
   );
-}
+});

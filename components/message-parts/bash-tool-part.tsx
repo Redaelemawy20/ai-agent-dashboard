@@ -1,11 +1,12 @@
 "use client";
 
+import { memo } from "react";
 import { ScrollText } from "lucide-react";
 import { formatToolResult } from "@/lib/message-preview-helpers";
 import { ToolInvocationCard } from "./tool-invocation-card";
 import type { ToolPartProps } from "./types";
 
-export function BashToolPart({
+export const BashToolPart = memo(function BashToolPart({
   part,
   isLatestMessage,
   status,
@@ -39,4 +40,4 @@ export function BashToolPart({
       </div>
     </ToolInvocationCard>
   );
-}
+});

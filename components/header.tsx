@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Menu, Monitor, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AISDKLogo } from "@/components/ui/icons";
@@ -13,7 +14,7 @@ export interface HeaderProps {
   className?: string;
 }
 
-export function Header({
+export const Header = memo(function Header({
   onMenuClick,
   showVncOnMobile = false,
   onViewToggle,
@@ -65,4 +66,4 @@ export function Header({
       </div>
     </div>
   );
-}
+});

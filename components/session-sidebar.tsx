@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Plus, MessageSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,7 @@ export interface SessionSidebarProps {
   isInitializing?: boolean;
 }
 
-export function SessionSidebar({ isInitializing = false }: SessionSidebarProps) {
+export const SessionSidebar = memo(function SessionSidebar({ isInitializing = false }: SessionSidebarProps) {
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const activeSessionHasMessages = useSessionStore(
@@ -124,4 +125,4 @@ export function SessionSidebar({ isInitializing = false }: SessionSidebarProps) 
       </div>
     </div>
   );
-}
+});

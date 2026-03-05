@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useToolStore } from "@/lib/stores/tool-store";
 import { isComputerEvent, type EventStatus } from "@/lib/types";
 import { formatDuration } from "@/lib/utils";
@@ -16,7 +17,7 @@ interface ExpandedToolDetailProps {
   variant?: "inline" | "modal";
 }
 
-export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailProps) {
+export const ExpandedToolDetail = memo(function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailProps) {
   const selectedId = useToolStore((s) => s.selectedToolCallId);
   const toolCalls = useToolStore((s) => s.toolCalls);
   const selectToolCall = useToolStore((s) => s.selectToolCall);
@@ -115,4 +116,4 @@ export function ExpandedToolDetail({ variant = "inline" }: ExpandedToolDetailPro
       </div>
     </div>
   );
-}
+});

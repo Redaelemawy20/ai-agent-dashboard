@@ -102,10 +102,10 @@ const PurePreviewMessage = ({
 export const PreviewMessage = memo(
   PurePreviewMessage,
   (prevProps, nextProps) => {
+    if (prevProps.isLatestMessage !== nextProps.isLatestMessage) return false;
     if (prevProps.status !== nextProps.status) return false;
     if (prevProps.message.annotations !== nextProps.message.annotations)
       return false;
-    // if (prevProps.message.content !== nextProps.message.content) return false;
     if (!equal(prevProps.message.parts, nextProps.message.parts)) return false;
 
     return true;
