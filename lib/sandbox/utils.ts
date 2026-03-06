@@ -20,7 +20,7 @@ export const getDesktop = async (id?: string) => {
         type: "snapshot",
         snapshotId: process.env.SANDBOX_SNAPSHOT_ID!,
       },
-      timeout: 300000,
+      timeout: 5 * 60_000, // 5 minutes
       ports: [NOVNC_PORT],
     });
 
@@ -114,5 +114,16 @@ export const killDesktop = async (id: string) => {
     await sandbox.stop();
   } catch (error) {
     console.error("Error killing desktop:", error);
+  }
+};
+
+export const getSandboxStatus = async (
+  id: string,
+): Promise<{ status: string } | null> => {
+  try {
+    const sandbox = await Sandbox.get({ sandboxId: id });
+    return { status: sandbox.status };
+  } catch {
+    return null;
   }
 };

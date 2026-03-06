@@ -61,7 +61,7 @@ export default function ChatPage() {
           >
             <div className="flex h-full min-w-0">
               {!sidebarCollapsedDesktop && (
-                <SessionSidebar isInitializing={isInitializing} />
+                <SessionSidebar />
               )}
               <div className="flex flex-col h-full flex-1 min-w-0">
                 <Header onMenuClick={toggleSidebarDesktop} />
@@ -145,10 +145,7 @@ export default function ChatPage() {
           isOpen={sidebarOpenMobile}
           onClose={closeSidebarOverlay}
         >
-          <SessionSidebar
-            isInitializing={isInitializing}
-            onSessionSelect={closeSidebarOverlay}
-          />
+          <SessionSidebar onSessionSelect={closeSidebarOverlay} />
         </SidebarOverlay>
       </div>
     </div>

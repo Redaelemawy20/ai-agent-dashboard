@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getDesktopURL } from "@/lib/sandbox/utils";
-import { killDesktopApi } from "@/lib/sandbox/client";
-import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
+import { killDesktopApi, getSandboxStatusApi } from "@/lib/sandbox/client";
 
-const SANDBOX_DEBOUNCE_MS = 400;
+const SANDBOX_STATUS_POLL_MS = 30_000;
 
 export interface UseSandboxLifecycleParams {
   activeSessionId: string | null;
@@ -26,33 +25,20 @@ export function useSandboxLifecycle({
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [sandboxId, setSandboxId] = useState<string | null>(null);
 
-  const sandboxIdRef = useRef<string | null>(null);
-  sandboxIdRef.current = sandboxId;
   const initInFlightRef = useRef(false);
 
-  const debouncedSessionId = useDebouncedValue(
-    activeSessionId,
-    SANDBOX_DEBOUNCE_MS
-  );
-
-  // Sandbox lifecycle: debounced kill + create when session settles
+  // Create desktop only when needed and we don't have one; do NOT recreate on session switch/create
   useEffect(() => {
-    if (!debouncedSessionId) return;
+    if (!activeSessionId) return;
+    if (sandboxId) return;
     if (initInFlightRef.current) return;
 
     let cancelled = false;
-    const prevSandboxId = sandboxIdRef.current;
     initInFlightRef.current = true;
 
     const init = async () => {
-      if (prevSandboxId) {
-        killDesktopApi(prevSandboxId).catch(() => {});
-      }
-
       try {
         setIsInitializing(true);
-        setStreamUrl(null);
-        setSandboxId(null);
         const { streamUrl: url, id } = await getDesktopURL();
         if (cancelled) return;
         setStreamUrl(url);
@@ -72,7 +58,9 @@ export function useSandboxLifecycle({
     return () => {
       cancelled = true;
     };
-  }, [debouncedSessionId]);
+  }, [activeSessionId, sandboxId]);
+
+  const refreshDesktopRef = useRef<(() => Promise<void>) | null>(null);
 
   const refreshDesktop = useCallback(async () => {
     if (initInFlightRef.current) {
@@ -94,6 +82,24 @@ export function useSandboxLifecycle({
       initInFlightRef.current = false;
     }
   }, [sandboxId]);
+
+  refreshDesktopRef.current = refreshDesktop;
+
+  // Poll sandbox status; refresh when no longer running (ephemeral timeout)
+  useEffect(() => {
+    if (!sandboxId || isInitializing) return;
+
+    const interval = setInterval(async () => {
+      if (initInFlightRef.current) return;
+      const result = await getSandboxStatusApi(sandboxId);
+      if (result && result.status !== "running") {
+        refreshDesktopRef.current?.();
+        toast.info("Sandbox expired, creating new desktop");
+      }
+    }, SANDBOX_STATUS_POLL_MS);
+
+    return () => clearInterval(interval);
+  }, [sandboxId, isInitializing]);
 
   return {
     streamUrl,

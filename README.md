@@ -4,7 +4,7 @@
 
 
 
-**[Submission Details](#submission-details)** · **[Data Flow](#data-flow)** · **[Feature Summary](#feature-summary)** · **[How It Works](#how-it-works)** · **[Deploy Your Own](#deploy-your-own)** · **[Running Locally](#running-locally)** · **[Environment Variables](#environment-variables)**
+**[Submission Details](#submission-details)** · **[Data Flow](#data-flow)** · **[Feature Summary](#feature-summary)** · **[Design Decisions](#design-decisions)** · **[How It Works](#how-it-works)** · **[Deploy Your Own](#deploy-your-own)** · **[Running Locally](#running-locally)** · **[Environment Variables](#environment-variables)**
 
   
 
@@ -39,7 +39,7 @@ Existing AI SDK streaming is preserved. Messages and tool invocations are handle
 
 #### 7. Chat history and multiple sessions
 
-Users can create, switch, and delete chat sessions. The session list appears in the sidebar. Sessions and active session ID persist in localStorage via Zustand. Messages are stored per session ID (including `_timing` for tool call durations). Switching sessions loads that session's messages; the tool store resets automatically when `sessionId` changes in `syncFromMessages`.
+Users can create, switch, and delete chat sessions. The session list appears in the sidebar. Sessions and active session ID persist in localStorage via Zustand. Messages are stored per session ID (including `_timing` for tool call durations). Switching sessions loads that session's messages; the tool store resets automatically when `sessionId` changes in `syncFromMessages`. **Reconnect after sandbox timeout** — Polling checks sandbox status; when the ephemeral sandbox expires, the app auto-refreshes the desktop and shows a toast.
 
 #### 8. Mobile support (bonus)
 
@@ -114,6 +114,7 @@ The layout is responsive: at the `xl` breakpoint it switches to a mobile layout 
 | 7.2   | Persist chat history to localStorage                             | ✓      | Via session-helpers                        |
 | 7.3   | Display session list in UI (sidebar or similar)                  | ✓      | SessionSidebar                             |
 | 7.4   | Each session maintains own message and event history             | ✓      |                                            |
+| 7.5   | Reconnect after sandbox timeout (auto-refresh desktop)           | ✓      | Polling + `/api/sandbox-status` + toast    |
 | **8** | **Mobile support (bonus)**                                       |        |                                            |
 | 8.1   | Responsive layout for phone viewports                            | ✓      |                                            |
 | 8.2   | VNC on small screens (modal/tab/toggle)                          | ✓      | Chat/VNC header toggle                     |
@@ -130,13 +131,13 @@ This section documents how data flows through the app from startup through user 
 
 1. **Session store hydration** — Zustand `persist` loads `computer-use-sessions` from `localStorage`. It restores `sessions` and `activeSessionId`. `onRehydrateStorage` runs: if `sessions` is empty it creates a new session; if `activeSessionId` is orphaned it fixes it. `setHasHydrated(true)` is called.
 2. **Page render** — `ChatPage` renders. It reads `activeSessionId` from the session store and renders `SessionSidebar`, `Chat` (only if `activeSessionId` exists), `DebugPanel`, `VncPanel`, `ExpandedToolDetail`.
-3. **Sandbox lifecycle** — `useSandboxLifecycle` receives `activeSessionId`, debounces it (400ms), and when stable calls `getDesktopURL()` to create an E2B desktop sandbox. Returns `streamUrl`, `sandboxId`, `isInitializing`. `VncPanel` uses `streamUrl` to display the remote desktop.
+3. **Sandbox lifecycle** — `useSandboxLifecycle` creates a single E2B desktop when `activeSessionId` is set and no sandbox exists. The same desktop is shared across sessions; switching or creating sessions does *not* create a new sandbox. Returns `streamUrl`, `sandboxId`, `isInitializing`. Polling checks sandbox status periodically; when the sandbox expires (ephemeral timeout), it auto-refreshes. `VncPanel` uses `streamUrl` to display the remote desktop.
 
 ### 2. Session Flow
 
-**Creating a session** — User clicks "New chat" → `addSession(session)` → session store updates. `Chat` remounts with `key={activeSessionId}`.
+**Creating a session** — User clicks "New chat" → `addSession(session)` → session store updates. `Chat` remounts with `key={activeSessionId}`. No new desktop is created; the existing shared desktop continues in use.
 
-**Switching sessions** — User selects another session → `setActiveSession(id)` → `activeSessionId` changes → `Chat` remounts. `useChatToolSync` receives new `sessionId` → `syncFromMessages(messages, sessionId)` runs. Tool store detects `sessionId !== prevSessionId` → clears timings, updates state, re-syncs tool events.
+**Switching sessions** — User selects another session → `setActiveSession(id)` → `activeSessionId` changes → `Chat` remounts. `useChatToolSync` receives new `sessionId` → `syncFromMessages(messages, sessionId)` runs. Tool store detects `sessionId !== prevSessionId` → clears timings, updates state, re-syncs tool events. The VNC desktop is *not* recreated on switch.
 
 **Deleting a session** — `deleteSession(id)` → `clearMessages(id)` removes messages from localStorage → session removed from list. If it was active, another session becomes active.
 
@@ -182,8 +183,9 @@ User submits → `handleSubmit` → `/api/chat` with message history and `sandbo
        ▼                                                                       │
   ChatPage                                                                     │
        │                                                                       │
-       ├── activeSessionId ──► useSandboxLifecycle ──► getDesktopURL()         │
+       ├── activeSessionId ──► useSandboxLifecycle ──► getDesktopURL() (once)   │
        │       │                     │                         │               │
+       │       │                     │  (shared desktop; no create on switch)   │
        │       │                     ▼                         ▼               │
        │       │              streamUrl, sandboxId ──► VncPanel                 │
        │       │                                                               │
@@ -216,11 +218,24 @@ User submits → `handleSubmit` → `/api/chat` with message history and `sandbo
 
 ---
 
+## Design Decisions
+
+### Shared desktop across sessions
+
+The E2B desktop sandbox is ephemeral (timeout, crashes). Instead of creating a new desktop on every session switch or new session:
+
+- **One desktop is shared** — A single sandbox is created when the app first needs it and is reused across all sessions. Switching sessions or creating a new chat does *not* kill and recreate the desktop.
+- **Rationale** — Fewer VM creations, faster session switches, simpler lifecycle. Since desktops are ephemeral, tying one desktop per session would add churn without lasting benefit.
+- **Recovery** — When the sandbox expires (timeout or failure), polling detects `status !== "running"` via `/api/sandbox-status`, calls `refreshDesktop()`, and shows a toast. The user continues in the same session with a fresh desktop.
+
+---
+
 ## Features
 
 - Streaming text responses powered by the [AI SDK](https://sdk.vercel.ai/docs).
 - Anthropic Claude Sonnet 4.5 with [computer use](https://sdk.vercel.ai/docs/guides/computer-use) and bash tool capabilities.
 - Remote desktop environment running in a [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox) with Chrome, a window manager, and VNC streaming.
+- **Auto-reconnect after sandbox timeout** — When the ephemeral sandbox expires, polling detects it via `/api/sandbox-status`, refreshes the desktop, and notifies the user with a toast.
 - [shadcn/ui](https://ui.shadcn.com/) components for a modern, responsive UI powered by [Tailwind CSS](https://tailwindcss.com).
 - Built with the latest [Next.js](https://nextjs.org) App Router.
 

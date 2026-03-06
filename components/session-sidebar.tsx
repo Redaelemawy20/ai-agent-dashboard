@@ -11,12 +11,10 @@ import {
 import { cn } from "@/lib/utils";
 
 export interface SessionSidebarProps {
-  isInitializing?: boolean;
   onSessionSelect?: () => void;
 }
 
 export const SessionSidebar = memo(function SessionSidebar({
-  isInitializing = false,
   onSessionSelect,
 }: SessionSidebarProps) {
   const sessions = useSessionStore((s) => s.sessions);
@@ -28,9 +26,7 @@ export const SessionSidebar = memo(function SessionSidebar({
   const deleteSession = useSessionStore((s) => s.deleteSession);
   const setActiveSession = useSessionStore((s) => s.setActiveSession);
 
-  const canNewChat = activeSessionHasMessages && !isInitializing;
-  const canSwitchSession = !isInitializing;
-  const canDelete = !isInitializing;
+  const canNewChat = activeSessionHasMessages;
 
   const handleNewChat = () => {
     if (!canNewChat) return;
@@ -40,7 +36,7 @@ export const SessionSidebar = memo(function SessionSidebar({
   };
 
   const handleSelectSession = (session: Session) => {
-    if (!canSwitchSession || session.id === activeSessionId) return;
+    if (session.id === activeSessionId) return;
     setActiveSession(session.id);
     onSessionSelect?.();
   };
@@ -59,11 +55,9 @@ export const SessionSidebar = memo(function SessionSidebar({
         onClick={handleNewChat}
         disabled={!canNewChat}
         title={
-          isInitializing
-            ? "Please wait for desktop to initialize"
-            : !activeSessionHasMessages
-              ? "Start a conversation first"
-              : undefined
+          !activeSessionHasMessages
+            ? "Start a conversation first"
+            : undefined
         }
       >
         <Plus className="h-4 w-4" />
@@ -75,26 +69,16 @@ export const SessionSidebar = memo(function SessionSidebar({
               <li key={session.id}>
                 <div
                   role="button"
-                  tabIndex={canSwitchSession ? 0 : -1}
+                  tabIndex={0}
                   onClick={() => handleSelectSession(session)}
                   onKeyDown={(e) => {
-                    if (!canSwitchSession) return;
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       handleSelectSession(session);
                     }
                   }}
-                  title={
-                    isInitializing
-                      ? "Please wait for desktop to initialize"
-                      : undefined
-                  }
-                  aria-disabled={!canSwitchSession}
                   className={cn(
-                    "group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
-                    canSwitchSession
-                      ? "cursor-pointer"
-                      : "cursor-not-allowed opacity-60",
+                    "group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors cursor-pointer",
                     activeSessionId === session.id
                       ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200"
                       : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -104,15 +88,7 @@ export const SessionSidebar = memo(function SessionSidebar({
                   <span className="flex-1 truncate">{session.title}</span>
                   <button
                     type="button"
-                    onClick={(e) => {
-                    if (canDelete) handleDeleteSession(e, session.id);
-                  }}
-                    disabled={!canDelete}
-                    title={
-                      isInitializing
-                        ? "Please wait for desktop to initialize"
-                        : undefined
-                    }
+                    onClick={(e) => handleDeleteSession(e, session.id)}
                     className="shrink-0 rounded p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-opacity disabled:opacity-50 disabled:pointer-events-none"
                     aria-label={`Delete ${session.title}`}
                   >
