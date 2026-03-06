@@ -39,7 +39,7 @@ Existing AI SDK streaming is preserved. Messages and tool invocations are handle
 
 #### 7. Chat history and multiple sessions
 
-Users can create, switch, and delete chat sessions. The session list appears in the sidebar. Sessions and active session ID persist in localStorage via Zustand. Messages are stored per session ID (including `_timing` for tool call durations). Switching sessions loads that session's messages; the tool store resets automatically when `sessionId` changes in `syncFromMessages`. **Reconnect after sandbox timeout** — Polling checks sandbox status; when the ephemeral sandbox expires, the app auto-refreshes the desktop and shows a toast.
+Users can create, switch, and delete chat sessions. The session list appears in the sidebar. Sessions and active session ID persist in localStorage via Zustand. Messages are stored per session ID (including `_timing` for tool call durations). Switching sessions loads that session's messages; the tool store resets automatically when `sessionId` changes in `syncFromMessages`. **Reconnect after sandbox timeout** — Added a new `/api/sandbox-status` route and client polling (`getSandboxStatusApi`) to detect when the sandbox is no longer `running`, automatically refresh the desktop, and show a toast.
 
 #### 8. Mobile support (bonus)
 
@@ -66,12 +66,50 @@ The layout is responsive: at the `xl` breakpoint it switches to a mobile layout 
 └──────────────────────────────┴──────────────────────────────────────┘
 ```
 
+#### Data flow: messages, sessions, tools
+
+```
+┌──────────────────────────────────────────────────────┐
+│                    localStorage                       │
+│  ┌──────────────────┐  ┌──────────────────────────┐  │
+│  │ sessions +       │  │ messages per session      │  │
+│  │ activeSessionId  │  │ (chat-messages-{id})      │  │
+│  └────────┬─────────┘  └────────┬─────────────────┘  │
+└───────────┼─────────────────────┼─────────────────────┘
+            │ persist             │ load / save
+            ▼                     ▼
+┌──────────────────────┐  ┌──────────────────────────┐
+│    session-store     │  │     Chat component        │
+│                      │  │                          │
+│  sessions[]          │──► sessionId ──► useChat     │
+│  activeSessionId     │  │             (messages)   │
+│  hasMessages         │◄── title, hasMessages       │
+│                      │  │                          │
+└──────────────────────┘  │  messages ───────────┐   │
+                          └──────────────────────┼───┘
+                                                 │
+                                                 ▼
+                          ┌──────────────────────────┐
+                          │      tool-store           │
+                          │                          │
+                          │  toolCalls[]             │
+                          │  agentStatus             │
+                          │  actionCounts            │
+                          │  (resets on switch)       │
+                          └──────────────────────────┘
+```
+
+- **session-store** persists sessions to localStorage and provides `activeSessionId` to Chat.
+- **Chat** loads messages from localStorage on mount, saves them back on every update, and pushes title/hasMessages to session-store.
+- **Chat** sends messages and status to **tool-store**, which derives tool calls, counts, and agent status.
+- On session switch, tool-store resets; Chat remounts and loads the new session's messages.
+
 ### Feature Summary
 
 
 | #     | Requirement                                                      | Status | Notes                                      |
 | ----- | ---------------------------------------------------------------- | ------ | ------------------------------------------ |
-| **1** | **Two-panel layout**                                             |        |                                            |
+| **1** | **Two-panel layout**                                             | ✓      |                                            |
 | 1.1   | Left: Chat with streaming messages                               | ✓      |                                            |
 | 1.2   | Left: Inline tool call visualizations                            | ✓      |                                            |
 | 1.3   | Left: Collapsible debug/event panel at bottom                    | ✓      |                                            |
@@ -80,14 +118,14 @@ The layout is responsive: at the `xl` breakpoint it switches to a mobile layout 
 | 1.6   | Panels horizontally resizable                                    | ✓      | ResizablePanelGroup                        |
 | 1.7   | Desktop and tablet viewports                                     | ✓      |                                            |
 | 1.8   | Visual hierarchy and usability                                   | ✓      |                                            |
-| **2** | **Tool call visualization**                                      |        |                                            |
+| **2** | **Tool call visualization**                                      | ✓      |                                            |
 | 2.1   | Display: type, status, duration per tool call                    | ✓      |                                            |
 | 2.2   | Screenshots: thumbnail in chat, click → full-size in right panel | ✓      |                                            |
 | 2.3   | Bash: show command and output                                    | ✓      |                                            |
 | 2.4   | Browser actions: action type and target element                  | ✓      |                                            |
 | 2.5   | Visual states: pending, complete, error                          | ✓      |                                            |
 | 2.6   | Clickable → expanded details in right panel                      | ✓      |                                            |
-| **3** | **Event pipeline & state management**                            |        |                                            |
+| **3** | **Event pipeline & state management**                            | ✓      |                                            |
 | 3.1   | Event store: capture every tool call and VM action               | ✓      |                                            |
 | 3.2   | Each event: id, timestamp, type, payload, status, duration       | ✓      |                                            |
 | 3.3   | TypeScript discriminated unions for event types                  | ✓      | ComputerEvent, BashEvent, UnknownToolEvent |
@@ -96,29 +134,30 @@ The layout is responsive: at the `xl` breakpoint it switches to a mobile layout 
 | 3.6   | Derived: agent status (idle, thinking, executing)                | ✓      |                                            |
 | 3.7   | Debug panel: collapsible, shows event store                      | ✓      |                                            |
 | 3.8   | Debug panel: event counts and timeline                           | ✓      |                                            |
-| **4** | **React performance**                                            |        |                                            |
+| **4** | **React performance**                                            | ✓      |                                            |
 | 4.1   | VNC must NOT re-render when chat messages update                 | ✓      | memo(VncPanelInner)                        |
 | 4.2   | Memoization strategies                                           | ✓      |                                            |
 | 4.3   | Clean component boundaries                                       | ✓      |                                            |
-| **5** | **TypeScript standards**                                         |        |                                            |
+| **5** | **TypeScript standards**                                         | ✓      |                                            |
 | 5.1   | No `any` types                                                   | ✓      |                                            |
 | 5.2   | Discriminated unions for event types                             | ✓      |                                            |
 | 5.3   | Proper typing for props, state, API responses                    | ✓      |                                            |
-| **6** | **Streaming & API integration**                                  |        |                                            |
+| **6** | **Streaming & API integration**                                  | ✓      |                                            |
 | 6.1   | Maintain existing streaming functionality                        | ✓      |                                            |
 | 6.2   | Handle AI SDK message and tool invocation types                  | ✓      |                                            |
 | 6.3   | Graceful error handling for API failures                         | ✓      | Toast on error                             |
 | 6.4   | Tool call lifecycle: initiated → executing → completed/failed    | ✓      |                                            |
-| **7** | **Chat history & multiple sessions**                             |        |                                            |
+| **7** | **Chat history & multiple sessions**                             | ✓      |                                            |
 | 7.1   | Create, switch between, and delete chat sessions                 | ✓      |                                            |
 | 7.2   | Persist chat history to localStorage                             | ✓      | Via session-helpers                        |
 | 7.3   | Display session list in UI (sidebar or similar)                  | ✓      | SessionSidebar                             |
 | 7.4   | Each session maintains own message and event history             | ✓      |                                            |
 | 7.5   | Reconnect after sandbox timeout (auto-refresh desktop)           | ✓      | Polling + `/api/sandbox-status` + toast    |
-| **8** | **Mobile support (bonus)**                                       |        |                                            |
+| 7.6   | Backend: add `/api/sandbox-status` route for timeout detection   | ✓      | Enables desktop refresh after timeout      |
+| **8** | **Mobile support (bonus)**                                       | ✓      |                                            |
 | 8.1   | Responsive layout for phone viewports                            | ✓      |                                            |
 | 8.2   | VNC on small screens (modal/tab/toggle)                          | ✓      | Chat/VNC header toggle                     |
-| 8.3   | Touch-friendly interactions                                      | ✓      |                                            |
+| 8.3   | Touch-friendly interactions                                      |        |                                            |
 
 
 ---
