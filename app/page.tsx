@@ -117,17 +117,13 @@ export default function ChatPage() {
             </div>
           ) : (
             <div className="flex flex-col flex-1 min-w-0 h-full min-h-0">
-              {activeSessionId ? (
+              {activeSessionId && (
                 <Chat
                   key={activeSessionId}
                   sessionId={activeSessionId}
                   sandboxId={sandboxId}
                   isInitializing={isInitializing}
                 />
-              ) : (
-                <div className="flex flex-1 items-center justify-center text-sm text-zinc-500">
-                  Create a chat to get started.
-                </div>
               )}
               <DebugPanel />
             </div>
