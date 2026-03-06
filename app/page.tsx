@@ -55,7 +55,7 @@ export default function ChatPage() {
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Left: sessions sidebar + chat */}
           <ResizablePanel
-            defaultSize={30}
+            defaultSize={35}
             minSize={25}
             className="flex flex-col border-r border-zinc-200"
           >
@@ -81,7 +81,7 @@ export default function ChatPage() {
 
           {/* Right: VNC desktop */}
           <ResizablePanel
-            defaultSize={70}
+            defaultSize={65}
             minSize={40}
             className="flex flex-col bg-black relative"
           >
