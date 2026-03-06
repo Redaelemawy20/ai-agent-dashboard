@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import type { TimingEntry } from "@/lib/stores/tool-helpers";
 
 export const prunedMessages = (messages: UIMessage[]): UIMessage[] => {
   if (messages.at(-1)?.role === "assistant") {
@@ -49,13 +50,19 @@ export function extractTitleFromFirstUserMessage(
   return text.length > TITLE_MAX_LENGTH ? `${title}…` : title;
 }
 
-export function pruneMessagesForStorage(messages: UIMessage[]): UIMessage[] {
+export function pruneMessagesForStorage(
+  messages: UIMessage[],
+  timings?: Record<string, TimingEntry>,
+): UIMessage[] {
   return messages.map((message) => ({
     ...message,
     parts: message.parts?.map((part) => {
       if (part.type !== "tool-invocation") return part;
       const inv = part.toolInvocation;
       const result = "result" in inv ? inv.result : undefined;
+      const timing = timings?.[inv.toolCallId];
+      const enrichedInv = timing ? { ...inv, _timing: timing } : inv;
+
       if (
         inv.toolName === "computer" &&
         (inv.args as { action?: string }).action === "screenshot" &&
@@ -67,7 +74,7 @@ export function pruneMessagesForStorage(messages: UIMessage[]): UIMessage[] {
         return {
           ...part,
           toolInvocation: {
-            ...inv,
+            ...enrichedInv,
             result: {
               type: "text" as const,
               text: STORAGE_IMAGE_PLACEHOLDER,
@@ -75,7 +82,7 @@ export function pruneMessagesForStorage(messages: UIMessage[]): UIMessage[] {
           },
         };
       }
-      return part;
+      return timing ? { ...part, toolInvocation: enrichedInv } : part;
     }),
   }));
 }

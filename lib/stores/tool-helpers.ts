@@ -13,6 +13,15 @@ export interface TimingEntry {
   completedAt: number | null;
 }
 
+function isTimingEntry(v: unknown): v is TimingEntry {
+  if (v == null || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.firstSeen === "number" &&
+    (o.completedAt === null || typeof o.completedAt === "number")
+  );
+}
+
 function deriveStatus(
   sdkState: string,
   result: ToolResult | undefined
@@ -46,7 +55,11 @@ export function syncToolEvents(
 
       let timing = timings.get(inv.toolCallId);
       if (!timing) {
-        timing = { firstSeen: now, completedAt: null };
+        const raw = (inv as unknown as Record<string, unknown>)._timing;
+        const persisted = isTimingEntry(raw) ? raw : undefined;
+        timing = persisted
+          ? { firstSeen: persisted.firstSeen, completedAt: persisted.completedAt }
+          : { firstSeen: now, completedAt: null };
         timings.set(inv.toolCallId, timing);
       }
 

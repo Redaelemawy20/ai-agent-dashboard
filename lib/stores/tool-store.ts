@@ -13,13 +13,15 @@ interface ToolStore {
   selectedToolCallId: string | null;
   agentStatus: AgentStatus;
 
-  syncFromMessages: (messages: Message[]) => void;
+  syncFromMessages: (messages: Message[], sessionId: string | null) => void;
+  getTimingsSnapshot: () => Record<string, TimingEntry>;
   setAgentStatus: (status: AgentStatus) => void;
   selectToolCall: (id: string | null) => void;
   reset: () => void;
 }
 
 const timings = new Map<string, TimingEntry>();
+let prevSessionId: string | null = null;
 
 export const useToolStore = create<ToolStore>((set) => ({
   toolCalls: [],
@@ -27,10 +29,16 @@ export const useToolStore = create<ToolStore>((set) => ({
   selectedToolCallId: null,
   agentStatus: "idle",
 
-  syncFromMessages: (messages) => {
+  syncFromMessages: (messages, sessionId) => {
+    if (sessionId !== prevSessionId) {
+      timings.clear();
+      prevSessionId = sessionId;
+    }
     const toolCalls = syncToolEvents(messages, timings);
     set({ toolCalls, actionCounts: countByAction(toolCalls) });
   },
+
+  getTimingsSnapshot: () => Object.fromEntries(timings),
 
   setAgentStatus: (agentStatus) => set({ agentStatus }),
 
@@ -38,6 +46,12 @@ export const useToolStore = create<ToolStore>((set) => ({
 
   reset: () => {
     timings.clear();
-    set({ toolCalls: [], actionCounts: {}, selectedToolCallId: null });
+    prevSessionId = null;
+    set({
+      toolCalls: [],
+      actionCounts: {},
+      selectedToolCallId: null,
+      agentStatus: "idle",
+    });
   },
 }));

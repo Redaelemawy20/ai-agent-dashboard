@@ -10,7 +10,6 @@ const SANDBOX_DEBOUNCE_MS = 400;
 
 export interface UseSandboxLifecycleParams {
   activeSessionId: string | null;
-  onSessionSwitch?: () => void;
 }
 
 export interface UseSandboxLifecycleResult {
@@ -22,34 +21,19 @@ export interface UseSandboxLifecycleResult {
 
 export function useSandboxLifecycle({
   activeSessionId,
-  onSessionSwitch,
 }: UseSandboxLifecycleParams): UseSandboxLifecycleResult {
   const [isInitializing, setIsInitializing] = useState(true);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [sandboxId, setSandboxId] = useState<string | null>(null);
 
-  const prevActiveSessionIdRef = useRef<string | null>(null);
   const sandboxIdRef = useRef<string | null>(null);
   sandboxIdRef.current = sandboxId;
   const initInFlightRef = useRef(false);
-
-  const onSessionSwitchRef = useRef(onSessionSwitch);
-  onSessionSwitchRef.current = onSessionSwitch;
 
   const debouncedSessionId = useDebouncedValue(
     activeSessionId,
     SANDBOX_DEBOUNCE_MS
   );
-
-  // Reset tool store immediately when session changes (no debounce)
-  useEffect(() => {
-    if (!activeSessionId) return;
-    const prev = prevActiveSessionIdRef.current;
-    prevActiveSessionIdRef.current = activeSessionId;
-    if (prev !== activeSessionId) {
-      onSessionSwitchRef.current?.();
-    }
-  }, [activeSessionId]);
 
   // Sandbox lifecycle: debounced kill + create when session settles
   useEffect(() => {

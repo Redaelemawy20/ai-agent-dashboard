@@ -69,7 +69,7 @@ export function Chat({
   useChatSessionSync({ sessionId, messages });
 
   // Sync tool events and agent status to tool store
-  useChatToolSync({ messages, status });
+  useChatToolSync({ messages, status, sessionId });
 
   const isLoading = status !== "ready";
 

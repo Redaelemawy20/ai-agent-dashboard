@@ -28,13 +28,8 @@ export default function ChatPage() {
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const selectedToolCallId = useToolStore((s) => s.selectedToolCallId);
   const selectToolCall = useToolStore((s) => s.selectToolCall);
-  const resetToolStore = useToolStore((s) => s.reset);
 
-  const { streamUrl, sandboxId, isInitializing, refreshDesktop } =
-    useSandboxLifecycle({
-      activeSessionId,
-      onSessionSwitch: resetToolStore,
-    });
+  const { streamUrl, sandboxId, isInitializing, refreshDesktop } = useSandboxLifecycle({ activeSessionId });
 
   usePageUnloadCleanup(sandboxId);
 

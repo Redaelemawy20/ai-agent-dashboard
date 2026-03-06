@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { UIMessage } from "ai";
 import { useSessionStore } from "@/lib/stores/session-store";
+import { useToolStore } from "@/lib/stores/tool-store";
 import { saveMessages } from "@/lib/stores/session-helpers";
 import {
   extractTitleFromFirstUserMessage,
@@ -23,12 +24,16 @@ export function useChatSessionSync({
   const setActiveSessionHasMessages = useSessionStore(
     (s) => s.setActiveSessionHasMessages
   );
+  const getTimingsSnapshot = useToolStore((s) => s.getTimingsSnapshot);
 
   useEffect(() => {
     if (sessionId && messages.length > 0) {
-      saveMessages(sessionId, pruneMessagesForStorage(messages));
+      saveMessages(
+        sessionId,
+        pruneMessagesForStorage(messages, getTimingsSnapshot()),
+      );
     }
-  }, [sessionId, messages]);
+  }, [sessionId, messages, getTimingsSnapshot]);
 
   useEffect(() => {
     setActiveSessionHasMessages(messages.length > 0);
