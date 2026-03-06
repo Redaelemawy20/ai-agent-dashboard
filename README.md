@@ -1,4 +1,6 @@
-**Author:** Reda Ahmed Kotb
+## Author: Reda Ahmed Kotb
+
+**Demo video:** [Watch demo (computer-use-demo.mp4)](https://drive.google.com/file/d/1KBQbbtpiVkdXLgqzoYQOwqvZuZ8bl2Km/view?usp=sharing)
 
 # [AI SDK Computer Use Demo](https://ai-agent-dashboard-coral.vercel.app)
 
