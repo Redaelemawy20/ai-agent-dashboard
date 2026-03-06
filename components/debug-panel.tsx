@@ -3,6 +3,7 @@
 import { memo, useCallback } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { useToolStore } from "@/lib/stores/tool-store";
+import { formatDuration } from "@/lib/utils";
 import type { ToolEvent, EventStatus, AgentStatus } from "@/lib/types";
 
 function labelFor(event: ToolEvent): string {
@@ -98,6 +99,9 @@ export const DebugPanel = memo(function DebugPanel() {
                 }`}
             >
               <span className="truncate flex-1">{labelFor(tc)}</span>
+              <span className="shrink-0 text-zinc-500 tabular-nums">
+                {formatDuration(tc.duration)}
+              </span>
               <span
                 className={`shrink-0 h-1.5 w-1.5 rounded-full ${STATUS_DOT[tc.status]}`}
               />

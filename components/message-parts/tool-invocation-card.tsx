@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useCallback } from "react";
 import { CheckCircle, CircleSlash, Loader2, StopCircle } from "lucide-react";
 import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 import { isToolResultAborted } from "@/lib/message-preview-helpers";
 import { useToolStore } from "@/lib/stores/tool-store";
 import type { ToolResult, ChatStatus } from "@/lib/types";
@@ -37,6 +37,10 @@ export function ToolInvocationCard({
 }: ToolInvocationCardProps) {
   const selectToolCall = useToolStore((s) => s.selectToolCall);
   const selectedId = useToolStore((s) => s.selectedToolCallId);
+  const toolCalls = useToolStore((s) => s.toolCalls);
+  const event = toolCalls.find((tc) => tc.toolCallId === toolCallId);
+  const durationLabel = event ? formatDuration(event.duration) : null;
+
   const handleClick = useCallback(
     () => selectToolCall(selectedId === toolCallId ? null : toolCallId),
     [selectToolCall, selectedId, toolCallId]
@@ -54,7 +58,16 @@ export function ToolInvocationCard({
       )}
     >
       {children}
-      <div className="w-5 h-5 flex items-center justify-center shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
+        {durationLabel != null && (
+          <span
+            className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums"
+            title="Duration"
+          >
+            {durationLabel}
+          </span>
+        )}
+        <div className="w-5 h-5 flex items-center justify-center">
         {state === "call" ? (
           isLatestMessage && status !== "ready" ? (
             <Loader2 className="animate-spin h-4 w-4 text-zinc-500" />
@@ -68,6 +81,7 @@ export function ToolInvocationCard({
             <CheckCircle size={14} className="text-green-600" />
           )
         ) : null}
+        </div>
       </div>
     </motion.button>
   );
